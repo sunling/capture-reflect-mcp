@@ -1,0 +1,8 @@
+{
+  "log-reflect": {
+    "command": "node",
+    "args": [
+      "${PLUGIN_ROOT}/dist/src/server.js"
+    ]
+  }
+}

@@ -5,6 +5,11 @@ export interface AppConfig {
   timeZone?: string;
 }
 
+export interface HttpConfig extends AppConfig {
+  host: string;
+  port: number;
+}
+
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const configuredPath = env.RECORDS_REPO_PATH?.trim();
   if (!configuredPath) {
@@ -20,3 +25,18 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   };
 }
 
+export function loadHttpConfig(env: NodeJS.ProcessEnv = process.env): HttpConfig {
+  const config = loadConfig(env);
+  const configuredPort = env.MCP_PORT?.trim();
+  const port = configuredPort ? Number(configuredPort) : 3000;
+
+  if (!Number.isInteger(port) || port < 1 || port > 65_535) {
+    throw new Error("MCP_PORT must be an integer between 1 and 65535.");
+  }
+
+  return {
+    ...config,
+    host: env.MCP_HOST?.trim() || "127.0.0.1",
+    port,
+  };
+}

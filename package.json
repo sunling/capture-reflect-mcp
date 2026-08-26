@@ -1,18 +1,23 @@
 {
   "name": "log-reflect-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "An MCP server for capturing and retrieving records in a log-reflect-practice repository.",
   "type": "module",
   "bin": {
     "log-reflect-mcp": "dist/src/server.js"
   },
   "files": [
-    "dist"
+    "dist",
+    ".codex-plugin",
+    ".mcp.json",
+    "skills"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/src/server.js",
+    "start:stdio": "node dist/src/server.js",
+    "start:http": "node dist/src/http.js",
     "test": "vitest run"
   },
   "engines": {

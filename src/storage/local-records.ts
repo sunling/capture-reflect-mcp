@@ -1,31 +1,13 @@
 import { promises as fs } from "node:fs";
 import type { Dirent } from "node:fs";
 import path from "node:path";
-
-export type RecordType = "journal" | "input";
-
-export interface StoredRecord {
-  path: string;
-  date: string;
-  type: RecordType;
-  content: string;
-}
-
-export interface CaptureJournalInput {
-  date: string;
-  title: string;
-  keyword: string;
-  content: string;
-}
-
-export interface CaptureInputInput {
-  date: string;
-  title: string;
-  keyword: string;
-  content: string;
-  tags?: string[];
-  source?: string;
-}
+import type {
+  CaptureInputInput,
+  CaptureJournalInput,
+  RecordsStore,
+  RecordType,
+  StoredRecord,
+} from "./records-store.js";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const SAFE_KEYWORD_PATTERN = /^[\p{L}\p{N}_-]{1,40}$/u;
@@ -82,14 +64,16 @@ async function walkMarkdownFiles(directory: string): Promise<string[]> {
   return nested.flat();
 }
 
-export class LocalRecordsStore {
+export class LocalRecordsStore implements RecordsStore {
   readonly #root: string;
 
   constructor(root: string) {
     this.#root = path.resolve(root);
   }
 
-  async captureJournal(input: CaptureJournalInput): Promise<{ path: string; action: "created" | "appended" }> {
+  async captureJournal(
+    input: CaptureJournalInput,
+  ): Promise<{ path: string; action: "created" | "appended" }> {
     assertDate(input.date);
     assertKeyword(input.keyword);
 
@@ -158,8 +142,12 @@ export class LocalRecordsStore {
 
     const requested = new Set(options.types ?? ["journal", "input"]);
     const roots = [
-      ...(requested.has("journal") ? [{ type: "journal" as const, path: path.join(this.#root, "daily", "journal") }] : []),
-      ...(requested.has("input") ? [{ type: "input" as const, path: path.join(this.#root, "daily", "inputs") }] : []),
+      ...(requested.has("journal")
+        ? [{ type: "journal" as const, path: path.join(this.#root, "daily", "journal") }]
+        : []),
+      ...(requested.has("input")
+        ? [{ type: "input" as const, path: path.join(this.#root, "daily", "inputs") }]
+        : []),
     ];
 
     const records = (
