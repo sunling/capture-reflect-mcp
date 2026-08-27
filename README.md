@@ -34,7 +34,7 @@ The MCP server handles access and storage. Agent Skills remain responsible for j
 
 The quickest private test uses the local HTTP server plus ChatGPT's Secure MCP Tunnel. This keeps the unauthenticated development endpoint on your own computer.
 
-Requirements: Node.js 22 or later and a local clone of your records repository.
+Requirement: Node.js 22 or later. A local clone of your records repository is optional.
 
 ```bash
 npm install
@@ -42,7 +42,9 @@ cp .env.example .env
 npm run build
 ```
 
-Set `RECORDS_REPO_PATH` in `.env`, then load it and start the Streamable HTTP endpoint:
+By default, records are stored under `~/.log-reflect/records`, which is created on the first
+write. To use an existing records repository instead, set its absolute path as
+`RECORDS_REPO_PATH` in `.env`. Then load the environment and start the Streamable HTTP endpoint:
 
 ```bash
 set -a
@@ -82,7 +84,8 @@ npm install
 cp .env.example .env
 ```
 
-Set the absolute path to your records repository:
+Optionally set the absolute path to an existing records repository. If it is omitted, the
+server uses `~/.log-reflect/records`:
 
 ```bash
 RECORDS_REPO_PATH=/absolute/path/to/log-reflect-practice
