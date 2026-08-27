@@ -1,3 +1,4 @@
+import os from "node:os";
 import path from "node:path";
 
 export interface AppConfig {
@@ -12,15 +13,13 @@ export interface HttpConfig extends AppConfig {
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   const configuredPath = env.RECORDS_REPO_PATH?.trim();
-  if (!configuredPath) {
-    throw new Error(
-      "RECORDS_REPO_PATH is required and must point to a log-reflect-practice repository.",
-    );
-  }
+  const recordsRepoPath = configuredPath
+    ? path.resolve(configuredPath)
+    : path.join(os.homedir(), ".log-reflect", "records");
 
   const timeZone = env.RECORDS_TIME_ZONE?.trim();
   return {
-    recordsRepoPath: path.resolve(configuredPath),
+    recordsRepoPath,
     ...(timeZone ? { timeZone } : {}),
   };
 }
