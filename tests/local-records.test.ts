@@ -54,6 +54,22 @@ describe("LocalRecordsStore", () => {
     expect(records[0]?.content).toContain('source: "The Creative Act"');
   });
 
+  it("creates the records directory tree on the first write", async () => {
+    const newRoot = path.join(root, "not-created-yet", "records");
+    const newStore = new LocalRecordsStore(newRoot);
+
+    const created = await newStore.captureInput({
+      date: "2026-08-27",
+      title: "零配置记录",
+      keyword: "开始",
+      content: "第一次写入时创建本地目录。",
+    });
+
+    await expect(fs.readFile(path.join(newRoot, created.path), "utf8")).resolves.toContain(
+      "第一次写入时创建本地目录。",
+    );
+  });
+
   it("searches matching lines without scanning outside record directories", async () => {
     await store.captureJournal({
       date: "2026-08-24",
