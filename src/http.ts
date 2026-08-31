@@ -5,7 +5,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { createMcpHandler } from "@modelcontextprotocol/server";
 import { loadHttpConfig } from "./config.js";
 import { createServer } from "./mcp.js";
-import { LocalRecordsStore } from "./storage/local-records.js";
+import { createRecordsStore } from "./storage/create-records-store.js";
 
 function requestUrl(request: IncomingMessage): URL {
   const host = request.headers.host ?? "127.0.0.1";
@@ -57,7 +57,7 @@ function sendJson(target: ServerResponse, status: number, value: unknown): void 
 
 export async function main(): Promise<void> {
   const config = loadHttpConfig();
-  const store = new LocalRecordsStore(config.recordsRepoPath);
+  const store = createRecordsStore(config);
   const mcp = createMcpHandler(() => createServer(store, config.timeZone), {
     legacy: "stateless",
     responseMode: "json",

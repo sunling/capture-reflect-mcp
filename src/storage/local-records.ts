@@ -1,6 +1,15 @@
 import { promises as fs } from "node:fs";
 import type { Dirent } from "node:fs";
 import path from "node:path";
+import {
+  assertDate,
+  assertKeyword,
+  buildInputDocument,
+  buildJournalFragment,
+  compactDate,
+  journalFileName,
+  recordDateFromPath,
+} from "./record-utils.js";
 import type {
   CaptureInputInput,
   CaptureJournalInput,
@@ -8,41 +17,6 @@ import type {
   RecordType,
   StoredRecord,
 } from "./records-store.js";
-
-const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const SAFE_KEYWORD_PATTERN = /^[\p{L}\p{N}_-]{1,40}$/u;
-const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"] as const;
-
-function assertDate(date: string): void {
-  if (!DATE_PATTERN.test(date)) {
-    throw new Error(`Invalid date: ${date}. Expected YYYY-MM-DD.`);
-  }
-  const parsed = new Date(`${date}T00:00:00Z`);
-  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== date) {
-    throw new Error(`Invalid calendar date: ${date}.`);
-  }
-}
-
-function assertKeyword(keyword: string): void {
-  if (!SAFE_KEYWORD_PATTERN.test(keyword)) {
-    throw new Error(
-      "keyword must be 1-40 letters, numbers, underscores, or hyphens, with no spaces or slashes.",
-    );
-  }
-}
-
-function compactDate(date: string): string {
-  return date.replaceAll("-", "");
-}
-
-function recordDateFromPath(filePath: string): string | undefined {
-  const match = path.basename(filePath).match(/^(\d{4})(\d{2})(\d{2})/);
-  return match ? `${match[1]}-${match[2]}-${match[3]}` : undefined;
-}
-
-function yamlString(value: string): string {
-  return JSON.stringify(value);
-}
 
 async function walkMarkdownFiles(directory: string): Promise<string[]> {
   let entries: Dirent<string>[];
@@ -92,15 +66,14 @@ export class LocalRecordsStore implements RecordsStore {
       );
     }
 
-    const fragment = `### ${input.title.trim()}\n\n${input.content.trim()}\n`;
+    const fragment = buildJournalFragment(input);
     if (existing.length === 1) {
       const filePath = path.join(directory, existing[0]!);
       await fs.appendFile(filePath, `\n${fragment}`, "utf8");
       return { path: path.relative(this.#root, filePath), action: "appended" };
     }
 
-    const weekday = WEEKDAYS[new Date(`${input.date}T00:00:00Z`).getUTCDay()];
-    const filePath = path.join(directory, `${compact}-${weekday}-${input.keyword}.md`);
+    const filePath = path.join(directory, journalFileName(input));
     await fs.writeFile(filePath, fragment, { encoding: "utf8", flag: "wx" });
     return { path: path.relative(this.#root, filePath), action: "created" };
   }
@@ -116,16 +89,7 @@ export class LocalRecordsStore implements RecordsStore {
     await fs.mkdir(directory, { recursive: true });
 
     const filePath = path.join(directory, `${compact}-${input.keyword}.md`);
-    const tags = input.tags?.filter(Boolean).slice(0, 3) ?? [];
-    const frontmatter = [
-      "---",
-      `title: ${yamlString(input.title.trim())}`,
-      `date: ${input.date}`,
-      ...(input.source ? [`source: ${yamlString(input.source.trim())}`] : []),
-      ...(tags.length > 0 ? ["tags:", ...tags.map((tag) => `  - ${yamlString(tag)}`)] : []),
-      "---",
-    ].join("\n");
-    const document = `${frontmatter}\n\n${input.content.trim()}\n`;
+    const document = buildInputDocument(input);
 
     await fs.writeFile(filePath, document, { encoding: "utf8", flag: "wx" });
     return { path: path.relative(this.#root, filePath), action: "created" };
