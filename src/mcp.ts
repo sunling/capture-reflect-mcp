@@ -38,7 +38,7 @@ function toolResult<T extends Record<string, unknown>>(value: T) {
 
 export function createServer(store: RecordsStore, timeZone?: string): McpServer {
   const server = new McpServer(
-    { name: "log-reflect-mcp", version: "0.2.0" },
+    { name: "log-reflect-mcp", version: "0.3.0" },
     {
       instructions:
         "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_input for external material or ideas. Preserve the user's voice and uncertainty; do not add conclusions they did not express. Use read tools before reviews or questions about prior records.",

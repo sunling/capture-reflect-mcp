@@ -1,6 +1,6 @@
 # log-reflect-mcp
 
-`log-reflect-mcp` is a local-first MCP server and ChatGPT plugin scaffold for a personal recording system. It lets an AI client capture and retrieve Markdown records through natural language while keeping the records in a separate repository.
+`log-reflect-mcp` is an MCP server and ChatGPT plugin scaffold for a personal recording system. It lets an AI client capture and retrieve Markdown records through natural language while keeping the records in a separate local or GitHub repository.
 
 It is designed to work with the directory conventions used by [`log-reflect-practice`](https://github.com/sunling/log-reflect-practice):
 
@@ -29,12 +29,13 @@ The MCP server handles access and storage. Agent Skills remain responsible for j
 - New records are written only inside those two directories.
 - Existing input files are never silently overwritten.
 - If more than one journal file exists for a date, the write stops instead of guessing.
+- GitHub credentials are read from the environment and are never written into records.
 
 ## Connect to ChatGPT Developer Mode
 
 The quickest private test uses the local HTTP server plus ChatGPT's Secure MCP Tunnel. This keeps the unauthenticated development endpoint on your own computer.
 
-Requirement: Node.js 22 or later. A local clone of your records repository is optional.
+Requirement: Node.js 22 or later. A local clone of your records repository is needed only for local storage.
 
 ```bash
 npm install
@@ -43,8 +44,32 @@ npm run build
 ```
 
 By default, records are stored under `~/.log-reflect/records`, which is created on the first
-write. To use an existing records repository instead, set its absolute path as
-`RECORDS_REPO_PATH` in `.env`. Then load the environment and start the Streamable HTTP endpoint:
+write. To use an existing local records repository instead, set its absolute path as
+`RECORDS_REPO_PATH` in `.env`.
+
+### Store records directly in GitHub
+
+Create a fine-grained personal access token for only the records repository. Grant it
+**Contents: Read and write**; no broader account or organization permissions are needed. Keep
+the repository private if the records are personal, and put the following values in `.env`:
+
+```bash
+RECORDS_STORAGE=github
+RECORDS_GITHUB_REPOSITORY=YOUR_GITHUB_USERNAME/YOUR_RECORDS_REPOSITORY
+RECORDS_GITHUB_TOKEN=github_pat_...
+RECORDS_GITHUB_BRANCH=main
+RECORDS_TIME_ZONE=America/Los_Angeles
+```
+
+The target branch must already exist. Each capture creates a GitHub commit immediately. Journal
+fragments for the same day are appended to the existing file with conflict retries; an existing
+input note is never overwritten. Reading and search remain limited to `daily/journal/` and
+`daily/inputs/`.
+
+The GitHub token used by this MCP server is separate from any GitHub connector authorization in
+ChatGPT. Never commit `.env`; it is already excluded by `.gitignore`.
+
+Load the environment and start the Streamable HTTP endpoint:
 
 ```bash
 set -a
@@ -117,6 +142,10 @@ After building, point an MCP client at the compiled server:
 }
 ```
 
+For GitHub-backed stdio, replace `RECORDS_REPO_PATH` in the client environment with
+`RECORDS_STORAGE`, `RECORDS_GITHUB_REPOSITORY`, `RECORDS_GITHUB_TOKEN`, and
+`RECORDS_GITHUB_BRANCH` as shown above.
+
 ## Development
 
 ```bash
@@ -134,7 +163,6 @@ npx @modelcontextprotocol/inspector node dist/src/server.js
 
 - Add MCP resources for reading individual records.
 - Add review and develop-practice prompts without moving judgment into storage code.
-- Add an opt-in Git commit workflow.
-- Add a GitHub-backed storage adapter with repository selection.
+- Add repository selection UI for GitHub-backed storage.
 - Add OAuth 2.1 for a hosted multi-user endpoint.
 - Add scheduled reflection and information-bubble-breaker workflows.
