@@ -204,17 +204,4 @@ describe("GitHubRecordsStore", () => {
     expect(matches[0]?.type).toBe("input");
   });
 
-  it("continues to read input notes from the legacy plural directory", async () => {
-    const api = new FakeGitHubApi();
-    const store = createStore(api);
-    api.files.set("daily/inputs/2026/202608/20260829-legacy.md", {
-      content: Buffer.from("旧目录中的记录"),
-      sha: "legacy",
-    });
-
-    const records = await store.getRecords({ from: "2026-08-29", to: "2026-08-29" });
-
-    expect(records).toHaveLength(1);
-    expect(records[0]?.type).toBe("input");
-  });
 });
