@@ -1,7 +1,7 @@
 {
   "name": "log-reflect",
   "version": "0.4.0",
-  "description": "Capture photos and Markdown records, recall past notes, and review patterns through natural language.",
+  "description": "Capture multilingual journals, photos, and Markdown records; recall past notes and review patterns through natural language.",
   "author": {
     "name": "Sun Ling",
     "url": "https://bysunling.com"
@@ -17,9 +17,9 @@
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "Log Reflect",
-    "shortDescription": "Record photos and notes, then revisit them",
-    "longDescription": "Capture journals, external inputs, and uploaded photos in your own record repository; search past notes and review patterns over time.",
+    "displayName": "Log & Reflect",
+    "shortDescription": "Record in any language, then revisit and reflect",
+    "longDescription": "Capture journals, external inputs, and uploaded photos in any language in your own GitHub repository; search past notes and review patterns over time.",
     "developerName": "Sun Ling",
     "category": "Productivity",
     "capabilities": [
@@ -30,10 +30,10 @@
     "privacyPolicyURL": "https://api.bysunling.com/privacy",
     "termsOfServiceURL": "https://api.bysunling.com/terms",
     "defaultPrompt": [
-      "帮我记录今天的日记。",
-      "把这张照片放进今天的日记。",
-      "记录一个输入。"
+      "Record today's journal entry in my original language.",
+      "Save this photo in today's journal.",
+      "Review my entries from the past seven days."
     ],
-    "brandColor": "#5B6F5A"
+    "brandColor": "#155B43"
   }
 }
