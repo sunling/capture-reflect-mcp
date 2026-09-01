@@ -1,8 +1,10 @@
 {
-  "log-reflect": {
-    "command": "node",
-    "args": [
-      "${PLUGIN_ROOT}/dist/src/server.js"
-    ]
+  "mcpServers": {
+    "log-reflect": {
+      "command": "node",
+      "args": [
+        "${PLUGIN_ROOT}/dist/src/server.js"
+      ]
+    }
   }
 }

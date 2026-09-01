@@ -26,13 +26,13 @@
       "Read",
       "Write"
     ],
-    "websiteURL": "https://github.com/sunling/log-reflect-mcp",
+    "websiteURL": "https://api.bysunling.com/",
+    "privacyPolicyURL": "https://api.bysunling.com/privacy",
+    "termsOfServiceURL": "https://api.bysunling.com/terms",
     "defaultPrompt": [
       "帮我记录今天的日记。",
       "把这张照片放进今天的日记。",
-      "记录一个输入。",
-      "回看我最近七天的记录。",
-      "搜索我以前关于这个话题的记录。"
+      "记录一个输入。"
     ],
     "brandColor": "#5B6F5A"
   }

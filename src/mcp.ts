@@ -45,7 +45,15 @@ function toolResult<T extends Record<string, unknown>>(value: T) {
   };
 }
 
-export function createServer(store: RecordsStore, timeZone?: string): McpServer {
+export interface SetupLinkProvider {
+  status(): Promise<{ connected: boolean; repository?: string; setupUrl: string }>;
+}
+
+export function createServer(
+  store: RecordsStore,
+  timeZone?: string,
+  setup?: SetupLinkProvider,
+): McpServer {
   const server = new McpServer(
     { name: "log-reflect-mcp", version: "0.4.0" },
     {
@@ -53,6 +61,25 @@ export function createServer(store: RecordsStore, timeZone?: string): McpServer 
         "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_input for external material or ideas. Preserve the user's voice and uncertainty; do not add conclusions they did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records.",
     },
   );
+
+  if (setup) {
+    server.registerTool(
+      "get_github_setup_link",
+      {
+        title: "Connect a GitHub repository",
+        description:
+          "Get the secure setup link used to authorize GitHub and choose the repository where this user's private records are stored.",
+        inputSchema: z.object({}),
+        outputSchema: z.object({
+          connected: z.boolean(),
+          repository: z.string().optional(),
+          setupUrl: z.string().url(),
+        }),
+        annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+      },
+      async () => toolResult(await setup.status()),
+    );
+  }
 
   server.registerTool(
     "capture_journal",
