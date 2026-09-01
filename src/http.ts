@@ -55,13 +55,22 @@ function sendJson(target: ServerResponse, status: number, value: unknown): void 
   target.end(JSON.stringify(value));
 }
 
+function reportMcpError(error: Error): void {
+  // Health checks and accidental POSTs may reach the MCP route without a JSON
+  // content type. The handler still returns 415; avoid presenting that expected
+  // client error as a server failure in the console.
+  if (error.message === "Unsupported Media Type: Content-Type must be application/json") {
+    return;
+  }
+  console.error(error);
+}
+
 export async function main(): Promise<void> {
   const config = loadHttpConfig();
   const store = createRecordsStore(config);
   const mcp = createMcpHandler(() => createServer(store, config.timeZone), {
     legacy: "stateless",
-    responseMode: "json",
-    onerror: (error) => console.error(error),
+    onerror: reportMcpError,
   });
 
   const http = createNodeServer(async (request, response) => {
