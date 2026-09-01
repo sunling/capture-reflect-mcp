@@ -27,6 +27,12 @@ The MCP server handles access and storage. Three focused Agent Skills handle jud
 - `review-records`: review a date range using evidence from the stored records.
 - `recall-records`: search before answering questions about earlier records.
 
+## Language support
+
+The plugin interface, tool names, and public metadata are English-first. Record content is multilingual: titles, Markdown bodies, source text, quotations, and filename keywords may use Unicode and keep the user's original language and code-switching. Capture tools do not translate unless the user explicitly asks. Recall and review responses follow the language of the current request while preserving source-language quotations.
+
+Examples include “记录一下今天发生的事”, “Save this reflection”, “今日のメモを保存して”, and mixed-language notes.
+
 ## Safety boundaries
 
 - The source repository contains no personal records or credentials.
