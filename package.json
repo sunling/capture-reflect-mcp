@@ -1,6 +1,6 @@
 {
   "name": "log-reflect-mcp",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "An MCP server for capturing and retrieving records in a log-reflect-practice repository.",
   "type": "module",
   "bin": {
