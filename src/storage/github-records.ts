@@ -98,6 +98,36 @@ export class GitHubRecordsStore implements RecordsStore {
     this.#fetch = options.fetch ?? globalThis.fetch;
   }
 
+  async initializeRepository(): Promise<{ created: string[] }> {
+    const created: string[] = [];
+    for (const directory of ["daily/input", "daily/journal", "reviews"]) {
+      if ((await this.#listDirectory(directory)).length > 0) continue;
+      const marker = `${directory}/.gitkeep`;
+      try {
+        await this.#putFile(marker, "", "log-reflect: initialize records repository");
+        created.push(marker);
+      } catch (error) {
+        if (!(error instanceof GitHubApiError) || ![404, 409, 422].includes(error.status)) {
+          throw error;
+        }
+        if ((await this.#listDirectory(directory)).length > 0) continue;
+        if (created.length > 0) throw error;
+
+        // A repository with no commits has no branch ref yet. Omitting the
+        // branch lets GitHub create the first commit on its default branch.
+        await this.#putFile(
+          marker,
+          "",
+          "log-reflect: initialize records repository",
+          undefined,
+          false,
+        );
+        created.push(marker);
+      }
+    }
+    return { created };
+  }
+
   async captureJournal(
     input: CaptureJournalInput,
   ): Promise<CaptureResult> {
@@ -347,7 +377,9 @@ export class GitHubRecordsStore implements RecordsStore {
       .filter(
         (filePath) =>
           filePath.endsWith(".md") &&
-          (filePath.startsWith("daily/journal/") || filePath.startsWith("daily/inputs/")),
+          (filePath.startsWith("daily/journal/") ||
+            filePath.startsWith("daily/input/") ||
+            filePath.startsWith("daily/inputs/")),
       );
   }
 
@@ -380,6 +412,7 @@ export class GitHubRecordsStore implements RecordsStore {
     content: string | Uint8Array,
     message: string,
     sha?: string,
+    includeBranch = true,
   ): Promise<void> {
     await this.#request(
       "PUT",
@@ -390,7 +423,7 @@ export class GitHubRecordsStore implements RecordsStore {
           typeof content === "string"
             ? Buffer.from(content, "utf8").toString("base64")
             : Buffer.from(content).toString("base64"),
-        branch: this.#branch,
+        ...(includeBranch ? { branch: this.#branch } : {}),
         ...(sha ? { sha } : {}),
       },
     );

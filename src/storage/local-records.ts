@@ -8,6 +8,7 @@ import {
   buildInputDocument,
   buildJournalFragment,
   compactDate,
+  inputDirectory,
   journalFileName,
   recordDateFromPath,
 } from "./record-utils.js";
@@ -106,9 +107,7 @@ export class LocalRecordsStore implements RecordsStore {
     assertKeyword(input.keyword);
 
     const compact = compactDate(input.date);
-    const year = compact.slice(0, 4);
-    const month = compact.slice(0, 6);
-    const directory = path.join(this.#root, "daily", "inputs", year, month);
+    const directory = path.join(this.#root, inputDirectory(input.date));
     await fs.mkdir(directory, { recursive: true });
 
     const filePath = path.join(directory, `${compact}-${input.keyword}.md`);
@@ -150,7 +149,7 @@ export class LocalRecordsStore implements RecordsStore {
     const compact = compactDate(date);
     const year = compact.slice(0, 4);
     const month = compact.slice(0, 6);
-    const category = type === "journal" ? "journal" : "inputs";
+    const category = type === "journal" ? "journal" : "input";
     const directory = path.join(this.#root, "daily", category, year, month, "images");
     await fs.mkdir(directory, { recursive: true });
 
@@ -190,7 +189,10 @@ export class LocalRecordsStore implements RecordsStore {
         ? [{ type: "journal" as const, path: path.join(this.#root, "daily", "journal") }]
         : []),
       ...(requested.has("input")
-        ? [{ type: "input" as const, path: path.join(this.#root, "daily", "inputs") }]
+        ? [
+            { type: "input" as const, path: path.join(this.#root, "daily", "input") },
+            { type: "input" as const, path: path.join(this.#root, "daily", "inputs") },
+          ]
         : []),
     ];
 

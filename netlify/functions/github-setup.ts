@@ -9,6 +9,7 @@ import {
   listInstallations,
 } from "../../src/production/github-auth.js";
 import { verifySetupToken } from "../../src/production/setup-token.js";
+import { GitHubRecordsStore } from "../../src/storage/github-records.js";
 
 const runtime = loadProductionConfig();
 const connections = new ConnectionStore(runtime);
@@ -82,11 +83,18 @@ async function saveRepository(request: Request): Promise<Response> {
   const repositories = await listInstallationRepositories(connection.accessToken, installationId);
   const repository = repositories.find(({ full_name }) => full_name === repositoryName);
   if (!repository) throw new Error("Repository is not accessible to this GitHub App installation.");
+  const selectedBranch = repository.default_branch || branch || "main";
+  const records = new GitHubRecordsStore({
+    repository: repository.full_name,
+    token: connection.accessToken,
+    branch: selectedBranch,
+  });
+  await records.initializeRepository();
   await connections.selectRepository({
     userId,
     installationId,
     repository: repository.full_name,
-    branch: repository.default_branch || branch,
+    branch: selectedBranch,
     timeZone,
   });
   return html("Log & Reflect is connected", `<p>Records will be stored in <strong>${escapeHtml(repository.full_name)}</strong>. You can close this page and return to ChatGPT.</p>`);

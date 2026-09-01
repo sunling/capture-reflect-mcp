@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { downloadImageAttachments } from "./attachments.js";
+import { registerSkills } from "./skill-catalog.js";
 import type { RecordsStore } from "./storage/records-store.js";
 
 const recordTypeSchema = z.enum(["journal", "input"]);
@@ -55,12 +56,14 @@ export function createServer(
   setup?: SetupLinkProvider,
 ): McpServer {
   const server = new McpServer(
-    { name: "log-reflect-mcp", version: "0.4.0" },
+    { name: "log-reflect-mcp", version: "0.5.0" },
     {
       instructions:
         "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_input for external material or ideas. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not add conclusions the user did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records.",
     },
   );
+
+  registerSkills(server);
 
   if (setup) {
     server.registerTool(
@@ -132,7 +135,7 @@ export function createServer(
   server.registerTool(
     "capture_input",
     {
-      title: "Record an input",
+      title: "Record an external input",
       description:
         "Record an external input in any language when the user asks to save an article, book, podcast, video, course, conversation, quotation, link, or an idea prompted by outside material. Preserve the source language and the user's response language, including code-switching; never translate unless explicitly requested. Keep the source and the user's own response distinguishable.",
       inputSchema: z.object({
