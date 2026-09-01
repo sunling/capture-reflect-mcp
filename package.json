@@ -1,6 +1,6 @@
 {
   "name": "log-reflect-mcp",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "An MCP server for capturing and retrieving records in a log-reflect-practice repository.",
   "type": "module",
   "bin": {
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.0.0",
+    "sharp": "^0.34.5",
     "zod": "^4.4.3"
   },
   "devDependencies": {

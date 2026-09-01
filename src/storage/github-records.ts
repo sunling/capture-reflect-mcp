@@ -1,6 +1,7 @@
 import {
   assertDate,
   assertKeyword,
+  attachmentMarkdown,
   buildInputDocument,
   buildJournalFragment,
   compactDate,
@@ -12,6 +13,8 @@ import {
 import type {
   CaptureInputInput,
   CaptureJournalInput,
+  CaptureResult,
+  RecordAttachment,
   RecordsStore,
   RecordType,
   StoredRecord,
@@ -97,7 +100,7 @@ export class GitHubRecordsStore implements RecordsStore {
 
   async captureJournal(
     input: CaptureJournalInput,
-  ): Promise<{ path: string; action: "created" | "appended" }> {
+  ): Promise<CaptureResult> {
     assertDate(input.date);
     assertKeyword(input.keyword);
 
@@ -110,10 +113,24 @@ export class GitHubRecordsStore implements RecordsStore {
       );
     }
 
-    const fragment = buildJournalFragment(input);
+    const storedAttachments = await this.#writeAttachments(
+      "journal",
+      input.date,
+      input.keyword,
+      input.attachments ?? [],
+    );
+    const imageMarkdown = attachmentMarkdown(storedAttachments);
+    const fragment = buildJournalFragment({
+      ...input,
+      content: imageMarkdown ? `${input.content.trim()}\n\n${imageMarkdown}` : input.content,
+    });
     if (existing.length === 1) {
       await this.#appendJournal(existing[0]!.path, fragment, input.date);
-      return { path: existing[0]!.path, action: "appended" };
+      return {
+        path: existing[0]!.path,
+        action: "appended",
+        attachmentPaths: storedAttachments.map((attachment) => attachment.path),
+      };
     }
 
     const filePath = `${directory}/${journalFileName(input)}`;
@@ -123,26 +140,51 @@ export class GitHubRecordsStore implements RecordsStore {
         fragment,
         `log-reflect: record journal for ${input.date}`,
       );
-      return { path: filePath, action: "created" };
+      return {
+        path: filePath,
+        action: "created",
+        attachmentPaths: storedAttachments.map((attachment) => attachment.path),
+      };
     } catch (error) {
       if (!(error instanceof GitHubApiError) || error.status !== 422) throw error;
 
       const concurrent = await this.#journalFilesForDate(directory, compact);
       if (concurrent.length !== 1) throw error;
       await this.#appendJournal(concurrent[0]!.path, fragment, input.date);
-      return { path: concurrent[0]!.path, action: "appended" };
+      return {
+        path: concurrent[0]!.path,
+        action: "appended",
+        attachmentPaths: storedAttachments.map((attachment) => attachment.path),
+      };
     }
   }
 
-  async captureInput(input: CaptureInputInput): Promise<{ path: string; action: "created" }> {
+  async captureInput(
+    input: CaptureInputInput,
+  ): Promise<CaptureResult & { action: "created" }> {
     assertDate(input.date);
     assertKeyword(input.keyword);
 
     const filePath = `${inputDirectory(input.date)}/${compactDate(input.date)}-${input.keyword}.md`;
+    const existing = await this.#listDirectory(inputDirectory(input.date));
+    if (existing.some((entry) => entry.type === "file" && entry.path === filePath)) {
+      throw new Error(`An input record already exists at ${filePath}.`);
+    }
+
+    const storedAttachments = await this.#writeAttachments(
+      "input",
+      input.date,
+      input.keyword,
+      input.attachments ?? [],
+    );
+    const imageMarkdown = attachmentMarkdown(storedAttachments);
     try {
       await this.#putFile(
         filePath,
-        buildInputDocument(input),
+        buildInputDocument({
+          ...input,
+          content: imageMarkdown ? `${input.content.trim()}\n\n${imageMarkdown}` : input.content,
+        }),
         `log-reflect: record input for ${input.date}`,
       );
     } catch (error) {
@@ -151,7 +193,56 @@ export class GitHubRecordsStore implements RecordsStore {
       }
       throw error;
     }
-    return { path: filePath, action: "created" };
+    return {
+      path: filePath,
+      action: "created",
+      attachmentPaths: storedAttachments.map((attachment) => attachment.path),
+    };
+  }
+
+  async #writeAttachments(
+    type: RecordType,
+    date: string,
+    keyword: string,
+    attachments: RecordAttachment[],
+  ): Promise<Array<{ path: string; alt: string }>> {
+    if (attachments.length === 0) return [];
+
+    const baseDirectory = type === "journal" ? journalDirectory(date) : inputDirectory(date);
+    const imageDirectory = `${baseDirectory}/images`;
+    const existingNames = new Set(
+      (await this.#listDirectory(imageDirectory))
+        .filter((entry) => entry.type === "file")
+        .map((entry) => entry.name),
+    );
+    const compact = compactDate(date);
+    const stored: Array<{ path: string; alt: string }> = [];
+
+    for (const [index, attachment] of attachments.entries()) {
+      let suffix = index + 1;
+      while (true) {
+        const fileName = `${compact}-${keyword}-${suffix}.${attachment.extension}`;
+        if (existingNames.has(fileName)) {
+          suffix += 1;
+          continue;
+        }
+        const filePath = `${imageDirectory}/${fileName}`;
+        try {
+          await this.#putFile(
+            filePath,
+            attachment.data,
+            `log-reflect: add image for ${date}`,
+          );
+          existingNames.add(fileName);
+          stored.push({ path: filePath, alt: attachment.alt });
+          break;
+        } catch (error) {
+          if (!(error instanceof GitHubApiError) || error.status !== 422) throw error;
+          suffix += 1;
+        }
+      }
+    }
+    return stored;
   }
 
   async getRecords(options: {
@@ -286,7 +377,7 @@ export class GitHubRecordsStore implements RecordsStore {
 
   async #putFile(
     filePath: string,
-    content: string,
+    content: string | Uint8Array,
     message: string,
     sha?: string,
   ): Promise<void> {
@@ -295,7 +386,10 @@ export class GitHubRecordsStore implements RecordsStore {
       `repos/${this.#repositoryPath}/contents/${encodedPath(filePath)}`,
       {
         message,
-        content: Buffer.from(content, "utf8").toString("base64"),
+        content:
+          typeof content === "string"
+            ? Buffer.from(content, "utf8").toString("base64")
+            : Buffer.from(content).toString("base64"),
         branch: this.#branch,
         ...(sha ? { sha } : {}),
       },
