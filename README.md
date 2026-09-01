@@ -13,12 +13,13 @@ practices/
 
 ## Current scope
 
-The server intentionally exposes only four tools:
+The local server exposes four record tools. The hosted service also exposes a secure setup tool:
 
 - `capture_journal`: create or append a personal journal fragment, with optional photos.
 - `capture_input`: save an external input as a Markdown note, with optional photos.
 - `get_records_by_date_range`: retrieve journal and input records for review.
 - `search_records`: search record contents.
+- `get_github_setup_link`: authorize a GitHub App and choose a per-user records repository.
 
 The MCP server handles access and storage. Three focused Agent Skills handle judgment:
 
@@ -110,7 +111,19 @@ daily/inputs/{YYYY}/{YYYYMM}/images/
 
 The record contains relative Markdown image links, so it remains portable when the records repository is cloned or viewed on GitHub. Original EXIF metadata is not retained. Non-image attachments are rejected in this version.
 
-> The current HTTP endpoint uses no authentication and binds to `127.0.0.1` by default. Do not expose it directly to the public internet. A hosted version that accesses private GitHub repositories must add OAuth 2.1 before deployment; ChatGPT does not accept a custom static API key for this flow.
+> The local HTTP endpoint uses no authentication and binds to `127.0.0.1` by default. Do not expose it directly to the public internet. The Netlify entrypoint under `netlify/functions/` is the authenticated production endpoint.
+
+## Hosted production deployment
+
+The production architecture uses WorkOS AuthKit for MCP OAuth, a GitHub App for per-user repository access, Supabase for encrypted connection metadata, and Netlify Functions for the public HTTPS endpoint. Journal bodies and images are written directly to the repository selected by the user; they are not copied into Supabase.
+
+1. Create a WorkOS AuthKit project. Enable CIMD and dynamic client registration, set the resource indicator to the stable public origin, and configure that origin as the default resource.
+2. Create a public GitHub App with **Contents: Read and write** and **Metadata: Read** repository permissions. Enable expiring user tokens. Set the callback URL to `/github/callback` and setup URL to `/github/installed` on the public origin.
+3. Create a dedicated Supabase project and apply `supabase/migrations/20260901051620_create_user_connections.sql`.
+4. Create a Netlify site from this repository, attach the stable custom domain, and configure every variable in `.env.production.example` as a secret environment variable.
+5. Connect `https://YOUR_DOMAIN/mcp` in ChatGPT, complete the domain verification challenge, scan the tools, run the review test cases, and submit the plugin for review.
+
+Never expose `SUPABASE_SECRET_KEY`, `GITHUB_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`, or `SETUP_TOKEN_SECRET` to a browser. Generate the latter two independently with a cryptographically secure random generator.
 
 The first ChatGPT connection creates an app identifier such as `plugin_asdk_app...`. That identifier is intentionally not committed here. It can later be placed in `.app.json` when packaging the final installable plugin.
 
@@ -179,7 +192,5 @@ npx @modelcontextprotocol/inspector node dist/src/server.js
 
 - Add MCP resources for reading individual records.
 - Add an explicit develop-practice workflow after the review and recall Skills have been exercised in real use.
-- Add repository selection UI for GitHub-backed storage.
-- Host a stable public HTTPS MCP endpoint and add OAuth 2.1 for per-user GitHub access.
 - Complete domain verification, privacy policy, tool scanning, test prompts, and ChatGPT plugin review.
 - Add scheduled reflection and information-bubble-breaker workflows.
