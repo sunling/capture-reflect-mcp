@@ -94,6 +94,20 @@ function createStore(api: FakeGitHubApi): GitHubRecordsStore {
 }
 
 describe("GitHubRecordsStore", () => {
+  it("initializes the canonical record directories without overwriting files", async () => {
+    const api = new FakeGitHubApi();
+    const store = createStore(api);
+
+    await expect(store.initializeRepository()).resolves.toEqual({
+      created: [
+        "daily/input/.gitkeep",
+        "daily/journal/.gitkeep",
+        "reviews/.gitkeep",
+      ],
+    });
+    await expect(store.initializeRepository()).resolves.toEqual({ created: [] });
+  });
+
   it("creates and then safely appends to a journal file", async () => {
     const api = new FakeGitHubApi();
     const store = createStore(api);
@@ -188,5 +202,19 @@ describe("GitHubRecordsStore", () => {
     expect(records).toHaveLength(2);
     expect(matches).toHaveLength(1);
     expect(matches[0]?.type).toBe("input");
+  });
+
+  it("continues to read input notes from the legacy plural directory", async () => {
+    const api = new FakeGitHubApi();
+    const store = createStore(api);
+    api.files.set("daily/inputs/2026/202608/20260829-legacy.md", {
+      content: Buffer.from("旧目录中的记录"),
+      sha: "legacy",
+    });
+
+    const records = await store.getRecords({ from: "2026-08-29", to: "2026-08-29" });
+
+    expect(records).toHaveLength(1);
+    expect(records[0]?.type).toBe("input");
   });
 });
