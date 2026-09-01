@@ -1,6 +1,6 @@
 # log-reflect-mcp
 
-`log-reflect-mcp` is an MCP server and ChatGPT plugin scaffold for a personal recording system. It lets an AI client capture and retrieve Markdown records through natural language while keeping the records in a separate local or GitHub repository.
+`log-reflect-mcp` is an MCP server and ChatGPT plugin scaffold for a personal recording system. It lets an AI client capture and retrieve Markdown records, including photo attachments, through natural language while keeping the records in a separate local or GitHub repository.
 
 It is designed to work with the directory conventions used by [`log-reflect-practice`](https://github.com/sunling/log-reflect-practice):
 
@@ -13,14 +13,18 @@ practices/
 
 ## Current scope
 
-The first version intentionally exposes only four tools:
+The server intentionally exposes only four tools:
 
-- `capture_journal`: create or append a personal journal fragment.
-- `capture_input`: save an external input as a Markdown note.
+- `capture_journal`: create or append a personal journal fragment, with optional photos.
+- `capture_input`: save an external input as a Markdown note, with optional photos.
 - `get_records_by_date_range`: retrieve journal and input records for review.
 - `search_records`: search record contents.
 
-The MCP server handles access and storage. Agent Skills remain responsible for judgment: how lightly to edit a journal, what belongs in an input note, how to review seven days, and when a recurring theme is ready to become a Practice.
+The MCP server handles access and storage. Three focused Agent Skills handle judgment:
+
+- `capture-records`: route a journal or input capture, preserve the user's voice, and pass uploaded photos through.
+- `review-records`: review a date range using evidence from the stored records.
+- `recall-records`: search before answering questions about earlier records.
 
 ## Safety boundaries
 
@@ -29,6 +33,7 @@ The MCP server handles access and storage. Agent Skills remain responsible for j
 - New records are written only inside those two directories.
 - Existing input files are never silently overwritten.
 - If more than one journal file exists for a date, the write stops instead of guessing.
+- Each capture accepts up to five image attachments. Images are resized to fit within 2048 × 2048 pixels, metadata is removed, and the processed file must be no larger than 10 MB.
 - GitHub credentials are read from the environment and are never written into records.
 
 ## Connect to ChatGPT Developer Mode
@@ -92,7 +97,18 @@ http://127.0.0.1:3000/mcp
 
 Keep both `npm run start:http` and `tunnel-client run --profile <your-profile>` running. Then open **Settings → Security and login → Developer mode** in ChatGPT. On the [ChatGPT Plugins page](https://chatgpt.com/admin/plugins), create an app, choose **Tunnel**, and select or paste your `tunnel_id`. See the [Secure MCP Tunnel guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) for installing and initializing `tunnel-client`.
 
-Once connected, try: “帮我记录今天的日记”“记录一个输入”“回看我最近七天的记录” or “搜索我以前关于搬家的记录”.
+Once connected, try: “帮我记录今天的日记”“把这张照片放进今天的日记”“记录一个输入”“回看我最近七天的记录” or “搜索我以前关于搬家的记录”.
+
+### Photo attachments
+
+In ChatGPT, attach one or more images to the message that asks to record a journal entry or input. Supported source formats are JPEG, PNG, WebP, HEIC, and AVIF. The plugin downloads the temporary ChatGPT file URL, normalizes the image, and stores it beside the Markdown record:
+
+```text
+daily/journal/{YYYY}/{YYYYMM}/images/
+daily/inputs/{YYYY}/{YYYYMM}/images/
+```
+
+The record contains relative Markdown image links, so it remains portable when the records repository is cloned or viewed on GitHub. Original EXIF metadata is not retained. Non-image attachments are rejected in this version.
 
 > The current HTTP endpoint uses no authentication and binds to `127.0.0.1` by default. Do not expose it directly to the public internet. A hosted version that accesses private GitHub repositories must add OAuth 2.1 before deployment; ChatGPT does not accept a custom static API key for this flow.
 
@@ -162,7 +178,8 @@ npx @modelcontextprotocol/inspector node dist/src/server.js
 ## Roadmap
 
 - Add MCP resources for reading individual records.
-- Add review and develop-practice prompts without moving judgment into storage code.
+- Add an explicit develop-practice workflow after the review and recall Skills have been exercised in real use.
 - Add repository selection UI for GitHub-backed storage.
-- Add OAuth 2.1 for a hosted multi-user endpoint.
+- Host a stable public HTTPS MCP endpoint and add OAuth 2.1 for per-user GitHub access.
+- Complete domain verification, privacy policy, tool scanning, test prompts, and ChatGPT plugin review.
 - Add scheduled reflection and information-bubble-breaker workflows.

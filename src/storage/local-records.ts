@@ -4,6 +4,7 @@ import path from "node:path";
 import {
   assertDate,
   assertKeyword,
+  attachmentMarkdown,
   buildInputDocument,
   buildJournalFragment,
   compactDate,
@@ -13,6 +14,8 @@ import {
 import type {
   CaptureInputInput,
   CaptureJournalInput,
+  CaptureResult,
+  RecordAttachment,
   RecordsStore,
   RecordType,
   StoredRecord,
@@ -47,7 +50,7 @@ export class LocalRecordsStore implements RecordsStore {
 
   async captureJournal(
     input: CaptureJournalInput,
-  ): Promise<{ path: string; action: "created" | "appended" }> {
+  ): Promise<CaptureResult> {
     assertDate(input.date);
     assertKeyword(input.keyword);
 
@@ -66,19 +69,39 @@ export class LocalRecordsStore implements RecordsStore {
       );
     }
 
-    const fragment = buildJournalFragment(input);
+    const storedAttachments = await this.#writeAttachments(
+      "journal",
+      input.date,
+      input.keyword,
+      input.attachments ?? [],
+    );
+    const imageMarkdown = attachmentMarkdown(storedAttachments);
+    const fragment = buildJournalFragment({
+      ...input,
+      content: imageMarkdown ? `${input.content.trim()}\n\n${imageMarkdown}` : input.content,
+    });
     if (existing.length === 1) {
       const filePath = path.join(directory, existing[0]!);
       await fs.appendFile(filePath, `\n${fragment}`, "utf8");
-      return { path: path.relative(this.#root, filePath), action: "appended" };
+      return {
+        path: path.relative(this.#root, filePath),
+        action: "appended",
+        attachmentPaths: storedAttachments.map((attachment) => attachment.path),
+      };
     }
 
     const filePath = path.join(directory, journalFileName(input));
     await fs.writeFile(filePath, fragment, { encoding: "utf8", flag: "wx" });
-    return { path: path.relative(this.#root, filePath), action: "created" };
+    return {
+      path: path.relative(this.#root, filePath),
+      action: "created",
+      attachmentPaths: storedAttachments.map((attachment) => attachment.path),
+    };
   }
 
-  async captureInput(input: CaptureInputInput): Promise<{ path: string; action: "created" }> {
+  async captureInput(
+    input: CaptureInputInput,
+  ): Promise<CaptureResult & { action: "created" }> {
     assertDate(input.date);
     assertKeyword(input.keyword);
 
@@ -89,10 +112,67 @@ export class LocalRecordsStore implements RecordsStore {
     await fs.mkdir(directory, { recursive: true });
 
     const filePath = path.join(directory, `${compact}-${input.keyword}.md`);
-    const document = buildInputDocument(input);
+    try {
+      await fs.access(filePath);
+      throw new Error(`An input record already exists at ${path.relative(this.#root, filePath)}.`);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+    }
+
+    const storedAttachments = await this.#writeAttachments(
+      "input",
+      input.date,
+      input.keyword,
+      input.attachments ?? [],
+    );
+    const imageMarkdown = attachmentMarkdown(storedAttachments);
+    const document = buildInputDocument({
+      ...input,
+      content: imageMarkdown ? `${input.content.trim()}\n\n${imageMarkdown}` : input.content,
+    });
 
     await fs.writeFile(filePath, document, { encoding: "utf8", flag: "wx" });
-    return { path: path.relative(this.#root, filePath), action: "created" };
+    return {
+      path: path.relative(this.#root, filePath),
+      action: "created",
+      attachmentPaths: storedAttachments.map((attachment) => attachment.path),
+    };
+  }
+
+  async #writeAttachments(
+    type: RecordType,
+    date: string,
+    keyword: string,
+    attachments: RecordAttachment[],
+  ): Promise<Array<{ path: string; alt: string }>> {
+    if (attachments.length === 0) return [];
+
+    const compact = compactDate(date);
+    const year = compact.slice(0, 4);
+    const month = compact.slice(0, 6);
+    const category = type === "journal" ? "journal" : "inputs";
+    const directory = path.join(this.#root, "daily", category, year, month, "images");
+    await fs.mkdir(directory, { recursive: true });
+
+    const stored: Array<{ path: string; alt: string }> = [];
+    for (const [index, attachment] of attachments.entries()) {
+      let suffix = index + 1;
+      while (true) {
+        const filePath = path.join(
+          directory,
+          `${compact}-${keyword}-${suffix}.${attachment.extension}`,
+        );
+        try {
+          await fs.writeFile(filePath, Buffer.from(attachment.data), { flag: "wx" });
+          stored.push({ path: path.relative(this.#root, filePath), alt: attachment.alt });
+          break;
+        } catch (error) {
+          if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+          suffix += 1;
+        }
+      }
+    }
+    return stored;
   }
 
   async getRecords(options: {

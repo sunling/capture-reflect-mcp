@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
+import { downloadImageAttachments } from "./attachments.js";
 import type { RecordsStore } from "./storage/records-store.js";
 
 const recordTypeSchema = z.enum(["journal", "input"]);
@@ -7,6 +8,14 @@ const recordTypeSchema = z.enum(["journal", "input"]);
 const captureResultSchema = z.object({
   path: z.string(),
   action: z.enum(["created", "appended"]),
+  attachmentPaths: z.array(z.string()),
+});
+
+const fileParamSchema = z.object({
+  download_url: z.string().url(),
+  file_id: z.string().min(1),
+  mime_type: z.string().optional(),
+  file_name: z.string().optional(),
 });
 
 const storedRecordSchema = z.object({
@@ -38,7 +47,7 @@ function toolResult<T extends Record<string, unknown>>(value: T) {
 
 export function createServer(store: RecordsStore, timeZone?: string): McpServer {
   const server = new McpServer(
-    { name: "log-reflect-mcp", version: "0.3.0" },
+    { name: "log-reflect-mcp", version: "0.4.0" },
     {
       instructions:
         "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_input for external material or ideas. Preserve the user's voice and uncertainty; do not add conclusions they did not express. Use read tools before reviews or questions about prior records.",
@@ -60,23 +69,32 @@ export function createServer(store: RecordsStore, timeZone?: string): McpServer 
           .max(40)
           .describe("Short filename keyword using letters, numbers, underscores, or hyphens"),
         content: z.string().min(1).describe("Markdown journal body without invented summaries or tags"),
+        attachments: z
+          .array(fileParamSchema)
+          .max(5)
+          .optional()
+          .describe("Optional image files uploaded in ChatGPT"),
       }),
       outputSchema: captureResultSchema,
+      _meta: { "openai/fileParams": ["attachments"] },
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
         openWorldHint: false,
       },
     },
-    async ({ date, title, keyword, content }) =>
-      toolResult(
-        await store.captureJournal({
+    async ({ date, title, keyword, content, attachments }) => {
+      const images = await downloadImageAttachments(attachments ?? []);
+      return toolResult({
+        ...(await store.captureJournal({
           date: date ?? currentDate(timeZone),
           title,
           keyword,
           content,
-        }),
-      ),
+          ...(images.length > 0 ? { attachments: images } : {}),
+        })),
+      });
+    },
   );
 
   server.registerTool(
@@ -96,25 +114,38 @@ export function createServer(store: RecordsStore, timeZone?: string): McpServer 
         content: z.string().min(1).describe("Markdown note body"),
         tags: z.array(z.string().min(1)).max(3).optional(),
         source: z.string().min(1).optional().describe("Source title or URL when available"),
+        attachments: z
+          .array(fileParamSchema)
+          .max(5)
+          .optional()
+          .describe("Optional image files uploaded in ChatGPT"),
       }),
-      outputSchema: z.object({ path: z.string(), action: z.literal("created") }),
+      outputSchema: z.object({
+        path: z.string(),
+        action: z.literal("created"),
+        attachmentPaths: z.array(z.string()),
+      }),
+      _meta: { "openai/fileParams": ["attachments"] },
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
         openWorldHint: false,
       },
     },
-    async ({ date, title, keyword, content, tags, source }) =>
-      toolResult(
-        await store.captureInput({
+    async ({ date, title, keyword, content, tags, source, attachments }) => {
+      const images = await downloadImageAttachments(attachments ?? []);
+      return toolResult({
+        ...(await store.captureInput({
           date: date ?? currentDate(timeZone),
           title,
           keyword,
           content,
           ...(tags ? { tags } : {}),
           ...(source ? { source } : {}),
-        }),
-      ),
+          ...(images.length > 0 ? { attachments: images } : {}),
+        })),
+      });
+    },
   );
 
   server.registerTool(

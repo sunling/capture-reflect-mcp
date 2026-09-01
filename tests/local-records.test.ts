@@ -32,10 +32,42 @@ describe("LocalRecordsStore", () => {
     });
 
     expect(created.action).toBe("created");
-    expect(appended).toEqual({ path: created.path, action: "appended" });
+    expect(appended).toEqual({
+      path: created.path,
+      action: "appended",
+      attachmentPaths: [],
+    });
     const content = await fs.readFile(path.join(root, created.path), "utf8");
     expect(content).toContain("### 第一次记录");
     expect(content).toContain("### 后来想到");
+  });
+
+  it("stores an image beside a journal and inserts a relative Markdown link", async () => {
+    const image = Buffer.from("processed-image");
+    const created = await store.captureJournal({
+      date: "2026-08-31",
+      title: "散步",
+      keyword: "散步",
+      content: "今天带猫出门。",
+      attachments: [
+        {
+          data: image,
+          extension: "jpg",
+          mimeType: "image/jpeg",
+          alt: "遛猫",
+        },
+      ],
+    });
+
+    expect(created.attachmentPaths).toEqual([
+      "daily/journal/2026/202608/images/20260831-散步-1.jpg",
+    ]);
+    await expect(
+      fs.readFile(path.join(root, created.attachmentPaths[0]!)),
+    ).resolves.toEqual(image);
+    await expect(fs.readFile(path.join(root, created.path), "utf8")).resolves.toContain(
+      "![遛猫](images/20260831-散步-1.jpg)",
+    );
   });
 
   it("creates an input note and retrieves it by date", async () => {
@@ -84,4 +116,3 @@ describe("LocalRecordsStore", () => {
     expect(results[0]?.excerpts).toEqual(["这些不高效的活一定要被摒弃吗？"]);
   });
 });
-

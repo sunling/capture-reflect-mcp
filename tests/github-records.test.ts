@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GitHubRecordsStore } from "../src/storage/github-records.js";
 
 interface FakeFile {
-  content: string;
+  content: Buffer;
   sha: string;
 }
 
@@ -53,7 +53,7 @@ class FakeGitHubApi {
 
         const sha = `sha-${++this.#revision}`;
         this.files.set(filePath, {
-          content: Buffer.from(body.content, "base64").toString("utf8"),
+          content: Buffer.from(body.content, "base64"),
           sha,
         });
         return jsonResponse({ content: { path: filePath, sha } }, existing ? 200 : 201);
@@ -66,7 +66,7 @@ class FakeGitHubApi {
           name: filePath.split("/").at(-1),
           type: "file",
           sha: file.sha,
-          content: Buffer.from(file.content, "utf8").toString("base64"),
+          content: file.content.toString("base64"),
           encoding: "base64",
         });
       }
@@ -112,10 +112,43 @@ describe("GitHubRecordsStore", () => {
     });
 
     expect(created.action).toBe("created");
-    expect(appended).toEqual({ path: created.path, action: "appended" });
-    const content = api.files.get(created.path)?.content;
+    expect(appended).toEqual({
+      path: created.path,
+      action: "appended",
+      attachmentPaths: [],
+    });
+    const content = api.files.get(created.path)?.content.toString("utf8");
     expect(content).toContain("### 下午");
     expect(content).toContain("### 后来");
+  });
+
+  it("stores an image and links it from the journal Markdown", async () => {
+    const api = new FakeGitHubApi();
+    const store = createStore(api);
+    const image = Buffer.from([0, 1, 2, 255]);
+
+    const created = await store.captureJournal({
+      date: "2026-08-31",
+      title: "散步",
+      keyword: "散步",
+      content: "今天带猫出门。",
+      attachments: [
+        {
+          data: image,
+          extension: "jpg",
+          mimeType: "image/jpeg",
+          alt: "遛猫",
+        },
+      ],
+    });
+
+    expect(created.attachmentPaths).toEqual([
+      "daily/journal/2026/202608/images/20260831-散步-1.jpg",
+    ]);
+    expect(api.files.get(created.attachmentPaths[0]!)?.content).toEqual(image);
+    expect(api.files.get(created.path)?.content.toString("utf8")).toContain(
+      "![遛猫](images/20260831-散步-1.jpg)",
+    );
   });
 
   it("does not overwrite an existing input note", async () => {
@@ -147,7 +180,7 @@ describe("GitHubRecordsStore", () => {
       keyword: "创作",
       content: "作品也许带着生命力。",
     });
-    api.files.set("PROFILE.md", { content: "生命力", sha: "outside" });
+    api.files.set("PROFILE.md", { content: Buffer.from("生命力"), sha: "outside" });
 
     const records = await store.getRecords({ from: "2026-08-30", to: "2026-08-31" });
     const matches = await store.searchRecords({ query: "生命力" });

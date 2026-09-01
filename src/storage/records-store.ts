@@ -7,11 +7,25 @@ export interface StoredRecord {
   content: string;
 }
 
+export interface RecordAttachment {
+  data: Uint8Array;
+  extension: "jpg" | "png" | "webp";
+  mimeType: "image/jpeg" | "image/png" | "image/webp";
+  alt: string;
+}
+
+export interface CaptureResult {
+  path: string;
+  action: "created" | "appended";
+  attachmentPaths: string[];
+}
+
 export interface CaptureJournalInput {
   date: string;
   title: string;
   keyword: string;
   content: string;
+  attachments?: RecordAttachment[];
 }
 
 export interface CaptureInputInput {
@@ -21,14 +35,15 @@ export interface CaptureInputInput {
   content: string;
   tags?: string[];
   source?: string;
+  attachments?: RecordAttachment[];
 }
 
 export interface RecordsStore {
   captureJournal(
     input: CaptureJournalInput,
-  ): Promise<{ path: string; action: "created" | "appended" }>;
+  ): Promise<CaptureResult>;
 
-  captureInput(input: CaptureInputInput): Promise<{ path: string; action: "created" }>;
+  captureInput(input: CaptureInputInput): Promise<CaptureResult & { action: "created" }>;
 
   getRecords(options: {
     from: string;

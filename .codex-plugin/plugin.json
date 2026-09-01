@@ -1,7 +1,7 @@
 {
   "name": "log-reflect",
-  "version": "0.2.0",
-  "description": "Capture, search, and review personal Markdown records through natural language.",
+  "version": "0.4.0",
+  "description": "Capture photos and Markdown records, recall past notes, and review patterns through natural language.",
   "author": {
     "name": "Sun Ling",
     "url": "https://bysunling.com"
@@ -18,8 +18,8 @@
   "mcpServers": "./.mcp.json",
   "interface": {
     "displayName": "Log Reflect",
-    "shortDescription": "Record and revisit your personal notes",
-    "longDescription": "Capture journals and inputs, search past records, and support recurring reflection workflows.",
+    "shortDescription": "Record photos and notes, then revisit them",
+    "longDescription": "Capture journals, external inputs, and uploaded photos in your own record repository; search past notes and review patterns over time.",
     "developerName": "Sun Ling",
     "category": "Productivity",
     "capabilities": [
@@ -29,6 +29,7 @@
     "websiteURL": "https://github.com/sunling/log-reflect-mcp",
     "defaultPrompt": [
       "帮我记录今天的日记。",
+      "把这张照片放进今天的日记。",
       "记录一个输入。",
       "回看我最近七天的记录。",
       "搜索我以前关于这个话题的记录。"

@@ -52,6 +52,15 @@ export function buildJournalFragment(input: CaptureJournalInput): string {
   return `### ${input.title.trim()}\n\n${input.content.trim()}\n`;
 }
 
+export function attachmentMarkdown(
+  attachments: Array<{ path: string; alt: string }>,
+): string {
+  if (attachments.length === 0) return "";
+  return attachments
+    .map(({ path: filePath, alt }) => `![${alt.replaceAll("]", "\\]")}](images/${path.basename(filePath)})`)
+    .join("\n\n");
+}
+
 export function buildInputDocument(input: CaptureInputInput): string {
   const tags = input.tags?.filter(Boolean).slice(0, 3) ?? [];
   const frontmatter = [
