@@ -378,8 +378,7 @@ export class GitHubRecordsStore implements RecordsStore {
         (filePath) =>
           filePath.endsWith(".md") &&
           (filePath.startsWith("daily/journal/") ||
-            filePath.startsWith("daily/input/") ||
-            filePath.startsWith("daily/inputs/")),
+            filePath.startsWith("daily/input/")),
       );
   }
 
