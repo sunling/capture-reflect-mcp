@@ -50,7 +50,7 @@ export function createServer(store: RecordsStore, timeZone?: string): McpServer 
     { name: "log-reflect-mcp", version: "0.4.0" },
     {
       instructions:
-        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_input for external material or ideas. Preserve the user's voice and uncertainty; do not add conclusions they did not express. Use read tools before reviews or questions about prior records.",
+        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_input for external material or ideas. Preserve the user's voice and uncertainty; do not add conclusions they did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records.",
     },
   );
 
@@ -61,7 +61,12 @@ export function createServer(store: RecordsStore, timeZone?: string): McpServer 
       description:
         "Record a personal journal fragment when the user asks to save an experience, event, feeling, observation, or daily reflection. Lightly edit for readability while preserving the user's wording, uncertainty, and unfinished thoughts.",
       inputSchema: z.object({
-        date: z.string().optional().describe("YYYY-MM-DD; defaults to today"),
+        date: z
+          .string()
+          .optional()
+          .describe(
+            "YYYY-MM-DD. Omit when the user says today or gives no date; the server will use today in its configured time zone. Pass only for an explicitly specified calendar date.",
+          ),
         title: z.string().min(1).describe("Short factual fragment heading"),
         keyword: z
           .string()
@@ -104,7 +109,12 @@ export function createServer(store: RecordsStore, timeZone?: string): McpServer 
       description:
         "Record an external input when the user asks to save an article, book, podcast, video, course, conversation, quotation, link, or an idea prompted by outside material. Keep the source and the user's own response distinguishable.",
       inputSchema: z.object({
-        date: z.string().optional().describe("YYYY-MM-DD; defaults to today"),
+        date: z
+          .string()
+          .optional()
+          .describe(
+            "YYYY-MM-DD. Omit when the user says today or gives no date; the server will use today in its configured time zone. Pass only for an explicitly specified calendar date.",
+          ),
         title: z.string().min(1),
         keyword: z
           .string()

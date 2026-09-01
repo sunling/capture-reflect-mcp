@@ -15,4 +15,4 @@ Lightly edit for readability while preserving uncertainty, unfinished thoughts, 
 
 Pass user-uploaded photos through the tool's `attachments` field. Do not replace an attached image with a prose description. The server normalizes and stores supported images and inserts their Markdown links.
 
-Use the current date in the user's configured time zone unless another date is specified. Choose a short factual title and a compact filename keyword. After a successful write, state whether the file was created or appended and show both the record path and any attachment paths.
+When the user says today or gives no date, omit the tool's `date` argument and let the server apply its configured time zone. Pass `date` only when the user explicitly specifies a calendar date. Choose a short factual title and a compact filename keyword. After a successful write, state whether the file was created or appended and show both the record path and any attachment paths.
