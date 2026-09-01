@@ -147,7 +147,7 @@ export function createServer(
           .string()
           .min(1)
           .max(40)
-          .describe("Short filename keyword using letters, numbers, underscores, or hyphens"),
+          .describe("Short filename keyword in the user's language when practical; Unicode letters and numbers, underscores, and hyphens are supported"),
         content: z
           .string()
           .min(1)
