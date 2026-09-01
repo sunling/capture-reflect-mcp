@@ -39,7 +39,7 @@ export function journalDirectory(date: string): string {
 
 export function inputDirectory(date: string): string {
   const compact = compactDate(date);
-  return `daily/inputs/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
+  return `daily/input/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
 }
 
 export function journalFileName(input: CaptureJournalInput): string {
