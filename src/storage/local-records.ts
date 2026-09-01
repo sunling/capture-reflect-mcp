@@ -189,10 +189,7 @@ export class LocalRecordsStore implements RecordsStore {
         ? [{ type: "journal" as const, path: path.join(this.#root, "daily", "journal") }]
         : []),
       ...(requested.has("input")
-        ? [
-            { type: "input" as const, path: path.join(this.#root, "daily", "input") },
-            { type: "input" as const, path: path.join(this.#root, "daily", "inputs") },
-          ]
+        ? [{ type: "input" as const, path: path.join(this.#root, "daily", "input") }]
         : []),
     ];
 
