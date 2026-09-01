@@ -58,7 +58,7 @@ export function createServer(
     { name: "log-reflect-mcp", version: "0.4.0" },
     {
       instructions:
-        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_input for external material or ideas. Preserve the user's voice and uncertainty; do not add conclusions they did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records.",
+        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_input for external material or ideas. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not add conclusions the user did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records.",
     },
   );
 
@@ -86,7 +86,7 @@ export function createServer(
     {
       title: "Record a journal entry",
       description:
-        "Record a personal journal fragment when the user asks to save an experience, event, feeling, observation, or daily reflection. Lightly edit for readability while preserving the user's wording, uncertainty, and unfinished thoughts.",
+        "Record a personal journal fragment in any language when the user asks to save an experience, event, feeling, observation, or daily reflection. Lightly edit for readability while preserving the user's original language, wording, code-switching, uncertainty, and unfinished thoughts. Never translate unless explicitly requested.",
       inputSchema: z.object({
         date: z
           .string()
@@ -94,13 +94,13 @@ export function createServer(
           .describe(
             "YYYY-MM-DD. Omit when the user says today or gives no date; the server will use today in its configured time zone. Pass only for an explicitly specified calendar date.",
           ),
-        title: z.string().min(1).describe("Short factual fragment heading"),
+        title: z.string().min(1).describe("Short factual fragment heading in the user's original language"),
         keyword: z
           .string()
           .min(1)
           .max(40)
-          .describe("Short filename keyword using letters, numbers, underscores, or hyphens"),
-        content: z.string().min(1).describe("Markdown journal body without invented summaries or tags"),
+          .describe("Short filename keyword in the user's language when practical; Unicode letters and numbers, underscores, and hyphens are supported"),
+        content: z.string().min(1).describe("Markdown journal body in the user's original language, without translation, invented summaries, or tags"),
         attachments: z
           .array(fileParamSchema)
           .max(5)
@@ -134,7 +134,7 @@ export function createServer(
     {
       title: "Record an input",
       description:
-        "Record an external input when the user asks to save an article, book, podcast, video, course, conversation, quotation, link, or an idea prompted by outside material. Keep the source and the user's own response distinguishable.",
+        "Record an external input in any language when the user asks to save an article, book, podcast, video, course, conversation, quotation, link, or an idea prompted by outside material. Preserve the source language and the user's response language, including code-switching; never translate unless explicitly requested. Keep the source and the user's own response distinguishable.",
       inputSchema: z.object({
         date: z
           .string()
@@ -142,13 +142,16 @@ export function createServer(
           .describe(
             "YYYY-MM-DD. Omit when the user says today or gives no date; the server will use today in its configured time zone. Pass only for an explicitly specified calendar date.",
           ),
-        title: z.string().min(1),
+        title: z.string().min(1).describe("Title in the user's original language"),
         keyword: z
           .string()
           .min(1)
           .max(40)
-          .describe("Short filename keyword using letters, numbers, underscores, or hyphens"),
-        content: z.string().min(1).describe("Markdown note body"),
+          .describe("Short filename keyword in the user's language when practical; Unicode letters and numbers, underscores, and hyphens are supported"),
+        content: z
+          .string()
+          .min(1)
+          .describe("Markdown note body preserving the source and user's original languages"),
         tags: z.array(z.string().min(1)).max(3).optional(),
         source: z.string().min(1).optional().describe("Source title or URL when available"),
         attachments: z
@@ -190,7 +193,7 @@ export function createServer(
     {
       title: "Read records by date range",
       description:
-        "Read journal entries and input notes in an inclusive date range. Use this before weekly or monthly reviews and whenever the user asks what they recorded during a period.",
+        "Read journal entries and input notes in any language within an inclusive date range. Use this before weekly or monthly reviews and whenever the user asks what they recorded during a period. Preserve source-language quotations; explain or summarize in the language of the user's request.",
       inputSchema: z.object({
         from: z.string().describe("Inclusive start date in YYYY-MM-DD"),
         to: z.string().describe("Inclusive end date in YYYY-MM-DD"),
@@ -214,7 +217,7 @@ export function createServer(
     {
       title: "Search personal records",
       description:
-        "Search journal entries and input notes for words or phrases. Use this when the user asks whether, when, or how they previously mentioned a person, topic, feeling, event, or idea.",
+        "Search journal entries and input notes for words or phrases in any language. Use the user's original search terms when possible. Use this when the user asks whether, when, or how they previously mentioned a person, topic, feeling, event, or idea.",
       inputSchema: z.object({
         query: z.string().min(1),
         from: z.string().optional().describe("Optional start date in YYYY-MM-DD"),
