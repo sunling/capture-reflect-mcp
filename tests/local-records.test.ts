@@ -81,7 +81,7 @@ describe("LocalRecordsStore", () => {
     });
     const records = await store.getRecords({ from: "2026-08-23", to: "2026-08-23" });
 
-    expect(created.path).toBe("daily/inputs/2026/202608/20260823-生命力.md");
+    expect(created.path).toBe("daily/input/2026/202608/20260823-生命力.md");
     expect(records).toHaveLength(1);
     expect(records[0]?.content).toContain('source: "The Creative Act"');
   });
