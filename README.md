@@ -7,8 +7,8 @@ It is designed to work with the directory conventions used by [`log-reflect-prac
 ```text
 daily/
 ├── journal/{YYYY}/{YYYYMM}/
-└── inputs/{YYYY}/{YYYYMM}/
-practices/
+└── input/{YYYY}/{YYYYMM}/
+reviews/
 ```
 
 ## Current scope
@@ -21,7 +21,7 @@ The local server exposes four record tools. The hosted service also exposes a se
 - `search_records`: search record contents.
 - `get_github_setup_link`: authorize a GitHub App and choose a per-user records repository.
 
-The MCP server handles access and storage. Three focused Agent Skills handle judgment:
+The MCP server handles access and storage. It publishes three focused Agent Skills through the MCP Skills extension so ChatGPT can discover their instructions and resources:
 
 - `capture-records`: route a journal or input capture, preserve the user's voice, and pass uploaded photos through.
 - `review-records`: review a date range using evidence from the stored records.
@@ -36,7 +36,7 @@ Examples include “记录一下今天发生的事”, “Save this reflection�
 ## Safety boundaries
 
 - The source repository contains no personal records or credentials.
-- The server can only read `daily/journal/` and `daily/inputs/`.
+- The server can only read `daily/journal/`, `daily/input/`, and the legacy `daily/inputs/` path.
 - New records are written only inside those two directories.
 - Existing input files are never silently overwritten.
 - If more than one journal file exists for a date, the write stops instead of guessing.
@@ -73,10 +73,10 @@ RECORDS_GITHUB_BRANCH=main
 RECORDS_TIME_ZONE=America/Los_Angeles
 ```
 
-The target branch must already exist. Each capture creates a GitHub commit immediately. Journal
+Each capture creates a GitHub commit immediately. Journal
 fragments for the same day are appended to the existing file with conflict retries; an existing
 input note is never overwritten. Reading and search remain limited to `daily/journal/` and
-`daily/inputs/`.
+`daily/input/`, while also recognizing the legacy `daily/inputs/` path.
 
 The GitHub token used by this MCP server is separate from any GitHub connector authorization in
 ChatGPT. Never commit `.env`; it is already excluded by `.gitignore`.
@@ -112,7 +112,7 @@ In ChatGPT, attach one or more images to the message that asks to record a journ
 
 ```text
 daily/journal/{YYYY}/{YYYYMM}/images/
-daily/inputs/{YYYY}/{YYYYMM}/images/
+daily/input/{YYYY}/{YYYYMM}/images/
 ```
 
 The record contains relative Markdown image links, so it remains portable when the records repository is cloned or viewed on GitHub. Original EXIF metadata is not retained. Non-image attachments are rejected in this version.
@@ -127,7 +127,23 @@ The production architecture uses WorkOS AuthKit for MCP OAuth, a GitHub App for 
 2. Create a public GitHub App with **Contents: Read and write** and **Metadata: Read** repository permissions. Enable expiring user tokens. Set the callback URL to `/github/callback` and setup URL to `/github/installed` on the public origin.
 3. Create a dedicated Supabase project and apply `supabase/migrations/20260901051620_create_user_connections.sql`.
 4. Create a Netlify site from this repository, attach the stable custom domain, and configure every variable in `.env.production.example` as a secret environment variable.
-5. Connect `https://YOUR_DOMAIN/mcp` in ChatGPT, complete the domain verification challenge, scan the tools, run the review test cases, and submit the plugin for review.
+5. Connect `https://YOUR_DOMAIN/mcp` in ChatGPT, complete the domain verification challenge, scan the tools and Skills, run the review test cases, and submit the plugin for review. Scan again after every deployed tool or Skill change because ChatGPT imports a snapshot.
+
+When a user saves a repository connection, Log & Reflect initializes any missing canonical directories with harmless `.gitkeep` files:
+
+```text
+daily/input/
+daily/journal/
+reviews/
+```
+
+Git does not track empty directories, so these marker files make the structure visible before the first record. Existing files are never replaced. A repository with no commits is initialized on its default branch.
+
+## Scheduled reviews
+
+The MCP server is passive: it exposes record and review capabilities but does not wake itself up on a schedule. The simplest hosted workflow is a ChatGPT scheduled task that periodically invokes the `review-records` Skill, reads the chosen date range with `get_records_by_date_range`, and returns the review in ChatGPT.
+
+At present, scheduled reviews are read-only and are not written back to the records repository. Persisting them under `reviews/` requires a separate, narrowly scoped `save_review` MCP tool. A self-hosted alternative is a Netlify Scheduled Function plus an AI model call, but that adds model credentials, scheduling, retries, and delivery handling to this service.
 
 Never expose `SUPABASE_SECRET_KEY`, `GITHUB_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`, or `SETUP_TOKEN_SECRET` to a browser. Generate the latter two independently with a cryptographically secure random generator.
 
