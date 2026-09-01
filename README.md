@@ -36,7 +36,7 @@ Examples include “记录一下今天发生的事”, “Save this reflection�
 ## Safety boundaries
 
 - The source repository contains no personal records or credentials.
-- The server can only read `daily/journal/`, `daily/input/`, and the legacy `daily/inputs/` path.
+- The server can only read `daily/journal/` and `daily/input/`.
 - New records are written only inside those two directories.
 - Existing input files are never silently overwritten.
 - If more than one journal file exists for a date, the write stops instead of guessing.
@@ -76,7 +76,7 @@ RECORDS_TIME_ZONE=America/Los_Angeles
 Each capture creates a GitHub commit immediately. Journal
 fragments for the same day are appended to the existing file with conflict retries; an existing
 input note is never overwritten. Reading and search remain limited to `daily/journal/` and
-`daily/input/`, while also recognizing the legacy `daily/inputs/` path.
+`daily/input/`.
 
 The GitHub token used by this MCP server is separate from any GitHub connector authorization in
 ChatGPT. Never commit `.env`; it is already excluded by `.gitignore`.
