@@ -91,7 +91,7 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
           const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
           if (detected) {
             input.value = detected;
-            if (display) display.textContent = `${detected} · detected automatically`;
+            if (display) display.textContent = detected + " · detected automatically";
           }
         } catch {}
       })();
