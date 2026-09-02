@@ -1,4 +1,5 @@
 import type { Config } from "@netlify/functions";
+import { brandPage, escapeHtml } from "./_shared/brand-page.js";
 import { loadProductionConfig } from "../../src/production/config.js";
 import { ConnectionStore } from "../../src/production/connection-store.js";
 import {
@@ -16,169 +17,11 @@ const connections = new ConnectionStore(runtime);
 const cookieName = "log_reflect_setup";
 
 function html(title: string, body: string, status = 200): Response {
-  return new Response(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>${escapeHtml(title)} · Log & Reflect</title>
-  <style>
-    :root {
-      color-scheme: light;
-      --bg: #f7f6f2;
-      --card: #ffffff;
-      --text: #1f211d;
-      --muted: #6e716a;
-      --line: #e5e4dd;
-      --accent: #365b43;
-      --accent-hover: #294a35;
-      --soft: #edf3ee;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      background: var(--bg);
-      color: var(--text);
-      font: 16px/1.55 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    }
-    .shell {
-      width: min(100% - 32px, 680px);
-      margin: 0 auto;
-      padding: 56px 0 72px;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 24px;
-      font-weight: 650;
-      letter-spacing: -0.01em;
-    }
-    .mark {
-      width: 32px;
-      height: 32px;
-      border-radius: 10px;
-      display: grid;
-      place-items: center;
-      background: var(--accent);
-      color: white;
-      font-size: 17px;
-    }
-    .card {
-      background: var(--card);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 28px;
-      box-shadow: 0 14px 40px rgba(31,33,29,.05);
-    }
-    .eyebrow {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 5px 9px;
-      border-radius: 999px;
-      background: var(--soft);
-      color: var(--accent);
-      font-size: 13px;
-      font-weight: 650;
-      margin-bottom: 14px;
-    }
-    h1 {
-      margin: 0;
-      font-size: clamp(28px, 5vw, 38px);
-      line-height: 1.15;
-      letter-spacing: -0.035em;
-    }
-    .lede {
-      margin: 10px 0 26px;
-      color: var(--muted);
-      max-width: 560px;
-    }
-    .field { margin-top: 20px; }
-    label {
-      display: block;
-      margin-bottom: 7px;
-      font-size: 14px;
-      font-weight: 650;
-    }
-    .hint {
-      margin: 7px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    select, input {
-      width: 100%;
-      min-height: 46px;
-      border: 1px solid #d7d8d2;
-      border-radius: 10px;
-      background: white;
-      color: var(--text);
-      padding: 10px 12px;
-      font: inherit;
-      outline: none;
-    }
-    select:focus, input:focus {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(54,91,67,.12);
-    }
-    button {
-      width: 100%;
-      min-height: 48px;
-      margin-top: 26px;
-      border: 0;
-      border-radius: 11px;
-      background: var(--accent);
-      color: white;
-      font: inherit;
-      font-weight: 650;
-      cursor: pointer;
-    }
-    button:hover { background: var(--accent-hover); }
-    .footer {
-      margin-top: 18px;
-      text-align: center;
-      color: var(--muted);
-      font-size: 13px;
-    }
-    .footer a { color: inherit; }
-    .success {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      display: grid;
-      place-items: center;
-      margin-bottom: 18px;
-      background: var(--soft);
-      color: var(--accent);
-      font-size: 24px;
-      font-weight: 700;
-    }
-    .repo {
-      display: inline-block;
-      margin-top: 4px;
-      font-weight: 650;
-      word-break: break-word;
-    }
-    @media (max-width: 520px) {
-      .shell { padding-top: 28px; }
-      .card { padding: 22px; border-radius: 15px; }
-    }
-  </style>
-</head>
-<body>
-  <div class="shell">
-    <div class="brand"><span class="mark">↺</span><span>Log &amp; Reflect</span></div>
-    <main class="card">
-      ${body}
-    </main>
-    <div class="footer"><a href="/privacy">Privacy</a> · <a href="/terms">Terms</a> · <a href="/support">Support</a></div>
-  </div>
-</body>
-</html>`, { status, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
-}
-
-function escapeHtml(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+  return brandPage({
+    title,
+    status,
+    body: `<section class="setup-card">${body}</section>`,
+  });
 }
 
 function setupCookie(token: string): string {
@@ -236,6 +79,7 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
         <p class="hint">Used to decide which date your journals and notes belong to.</p>
       </div>
       <button type="submit">Save &amp; connect</button>
+      <div class="privacy-note"><span>●</span><div>Your writing and images go directly to the GitHub repository you choose. Log &amp; Reflect stores only the encrypted connection details needed to access it.</div></div>
     </form>
     <script>
       (() => {
@@ -289,6 +133,7 @@ async function saveRepository(request: Request): Promise<Response> {
     <h1>You're all set</h1>
     <p class="lede">Your records will be stored in <span class="repo">${escapeHtml(repository.full_name)}</span>.</p>
     <p class="hint">You can close this page and return to ChatGPT. Log &amp; Reflect will use your selected repository and time zone from now on.</p>
+    <div class="privacy-note"><span>●</span><div>Your repository is ready with journals, notes, and reviews folders.</div></div>
   `);
 }
 
