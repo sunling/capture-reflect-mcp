@@ -78,7 +78,7 @@ export function createServer(
           repository: z.string().optional(),
           setupUrl: z.string().url(),
         }),
-        annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+        annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       },
       async () => toolResult(await setup.status()),
     );
