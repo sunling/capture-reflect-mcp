@@ -10,12 +10,6 @@ notes/{YYYY}/{YYYYMM}/
 reviews/
 ```
 
-> Upgrading to 0.6.0: move existing journal files from `daily/journal/` or
-> `daily/journals/` to the root-level `journals/` directory. Move notes from
-> `daily/note/`, `daily/notes/`, `daily/input/`, or `daily/inputs/` to the
-> root-level `notes/` directory. Version 0.6.0 intentionally uses only these
-> root-level collection paths.
-
 ## Current scope
 
 The local server exposes four record tools. The hosted service also exposes a secure setup tool:
