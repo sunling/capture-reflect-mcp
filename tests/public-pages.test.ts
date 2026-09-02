@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import publicPages from "../netlify/functions/public-pages.js";
 
 describe("public pages", () => {
-  it("presents Log & Reflect as a trustworthy product", async () => {
+  it("presents Capture & Reflect as a trustworthy product", async () => {
     const response = publicPages(new Request("https://api.bysunling.com/"));
     const body = await response.text();
 
@@ -19,7 +19,7 @@ describe("public pages", () => {
       const body = await response.text();
 
       expect(response.status).toBe(200);
-      expect(body).toContain("Log &amp; Reflect");
+      expect(body).toContain("Capture &amp; Reflect");
       expect(body).toContain("Your words, in your repository.");
     }
   });
