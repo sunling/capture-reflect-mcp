@@ -1,4 +1,4 @@
-export type RecordType = "journal" | "input";
+export type RecordType = "journal" | "note";
 
 export interface StoredRecord {
   path: string;
@@ -28,7 +28,7 @@ export interface CaptureJournalInput {
   attachments?: RecordAttachment[];
 }
 
-export interface CaptureInputInput {
+export interface CaptureNoteInput {
   date: string;
   title: string;
   keyword: string;
@@ -43,7 +43,7 @@ export interface RecordsStore {
     input: CaptureJournalInput,
   ): Promise<CaptureResult>;
 
-  captureInput(input: CaptureInputInput): Promise<CaptureResult & { action: "created" }>;
+  captureNote(input: CaptureNoteInput): Promise<CaptureResult & { action: "created" }>;
 
   getRecords(options: {
     from: string;
