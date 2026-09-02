@@ -1,7 +1,7 @@
 {
   "name": "log-reflect-mcp",
   "version": "0.6.0",
-  "description": "An MCP server for capturing and retrieving records in a log-reflect-practice repository.",
+  "description": "The MCP server behind Capture & Reflect, for capturing and revisiting personal records in your own repository.",
   "type": "module",
   "bin": {
     "log-reflect-mcp": "dist/src/server.js"
