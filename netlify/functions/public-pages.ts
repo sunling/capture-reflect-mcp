@@ -24,7 +24,7 @@ function homePage(): Response {
           <h1>Keep what happened.<br><em>Return to what matters.</em></h1>
           <p class="lede">Capture &amp; Reflect helps you capture journals, notes, and images in conversation—then revisit them with the language and perspective that feel natural to you.</p>
           <div class="actions">
-            <a class="button" href="https://github.com/sunling/log-reflect-mcp">View the open-source project</a>
+            <a class="button" href="https://github.com/sunling/capture-reflect-mcp">View the open-source project</a>
             <a class="button secondary" href="/support">Get support</a>
           </div>
         </div>
@@ -50,7 +50,7 @@ function homePage(): Response {
 function supportPage(): Response {
   return brandPage({
     title: "Support",
-    body: `<section class="reading-card"><div class="eyebrow">We are here to help</div><h1>Support</h1><p>For help, bug reports, account disconnection, or data deletion requests, open an issue in the <a href="https://github.com/sunling/log-reflect-mcp/issues">Capture &amp; Reflect GitHub repository</a>.</p></section>`,
+    body: `<section class="reading-card"><div class="eyebrow">We are here to help</div><h1>Support</h1><p>For help, bug reports, account disconnection, or data deletion requests, open an issue in the <a href="https://github.com/sunling/capture-reflect-mcp/issues">Capture &amp; Reflect GitHub repository</a>.</p></section>`,
   });
 }
 
