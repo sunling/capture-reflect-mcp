@@ -6,7 +6,7 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 
 const SKILL_NAMES = ["capture-records", "review-records", "recall-records"] as const;
-const SKILL_URI_PREFIX = "skill://log-reflect/";
+const SKILL_URI_PREFIX = "skill://capture-reflect/";
 
 const skillResourceSchema = z.object({
   uri: z.string(),
