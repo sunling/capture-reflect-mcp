@@ -17,9 +17,9 @@
   "skills": "./skills/",
   "mcpServers": "./.mcp.json",
   "interface": {
-    "displayName": "Log & Reflect",
-    "shortDescription": "Record in any language, then revisit and reflect",
-    "longDescription": "Capture journals, notes, and uploaded photos in any language in your own GitHub repository; search past records and review patterns over time.",
+    "displayName": "Capture & Reflect",
+    "shortDescription": "Capture what matters, then revisit and reflect",
+    "longDescription": "Capture journals, notes, and uploaded photos in any language in your own GitHub repository; revisit past records and reflect on patterns over time.",
     "developerName": "Sun Ling",
     "category": "Productivity",
     "capabilities": [
