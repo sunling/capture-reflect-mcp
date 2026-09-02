@@ -73,9 +73,10 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
         <select id="repository" name="repository" required>${options}</select>
         <p class="hint">Only repositories granted to the Capture &amp; Reflect GitHub App appear here.</p>
       </div>
+      <input type="hidden" id="timezone" name="timezone" value="UTC">
       <div class="field">
-        <label for="timezone">Time zone</label>
-        <input id="timezone" name="timezone" value="UTC" placeholder="America/Los_Angeles" autocomplete="off" required>
+        <label>Time zone</label>
+        <div class="timezone-display" id="timezone-display">UTC · detected automatically</div>
         <p class="hint">Used to decide which date your journals and notes belong to.</p>
       </div>
       <button type="submit">Save &amp; connect</button>
@@ -84,10 +85,14 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
     <script>
       (() => {
         const input = document.getElementById("timezone");
+        const display = document.getElementById("timezone-display");
         if (!(input instanceof HTMLInputElement)) return;
         try {
           const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-          if (detected) input.value = detected;
+          if (detected) {
+            input.value = detected;
+            if (display) display.textContent = `${detected} · detected automatically`;
+          }
         } catch {}
       })();
     </script>
