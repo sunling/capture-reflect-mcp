@@ -146,7 +146,14 @@ export default async (request: Request): Promise<Response> => {
   try {
     const url = new URL(request.url);
     if (url.pathname === "/setup" && request.method === "GET") {
-      const { token } = await tokenAndUser(request);
+      const { token, userId } = await tokenAndUser(request);
+      const connection = await connections.get(userId);
+      if (connection) {
+        const response = await repositoryPage(userId, token);
+        const headers = new Headers(response.headers);
+        headers.append("set-cookie", setupCookie(token));
+        return new Response(response.body, { status: response.status, headers });
+      }
       return new Response(null, { status: 302, headers: { location: githubAuthorizeUrl(runtime, token), "set-cookie": setupCookie(token) } });
     }
     if (url.pathname === "/github/callback" && request.method === "GET") {
