@@ -34,12 +34,12 @@ export function recordDateFromPath(filePath: string): string | undefined {
 
 export function journalDirectory(date: string): string {
   const compact = compactDate(date);
-  return `daily/journals/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
+  return `journals/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
 }
 
 export function noteDirectory(date: string): string {
   const compact = compactDate(date);
-  return `daily/notes/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
+  return `notes/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
 }
 
 export function journalFileName(input: CaptureJournalInput): string {
