@@ -1,6 +1,6 @@
 ---
 name: review-records
-description: Review personal journal entries and input notes across a week, month, or explicit date range. Use when the user asks for a recap, reflection, patterns, changes, connections, or questions grounded in a period of their records.
+description: Review personal journal entries and notes across a week, month, or explicit date range. Use when the user asks for a recap, reflection, patterns, changes, connections, or questions grounded in a period of their records.
 ---
 
 # Review Records
