@@ -1,6 +1,6 @@
 import type {
-  CaptureInputInput,
   CaptureJournalInput,
+  CaptureNoteInput,
   RecordsStore,
   RecordType,
 } from "../storage/records-store.js";
@@ -11,7 +11,7 @@ function notConnected(): never {
 
 export class UnconfiguredRecordsStore implements RecordsStore {
   captureJournal(_input: CaptureJournalInput): Promise<never> { return Promise.reject(notConnected()); }
-  captureInput(_input: CaptureInputInput): Promise<never> { return Promise.reject(notConnected()); }
+  captureNote(_input: CaptureNoteInput): Promise<never> { return Promise.reject(notConnected()); }
   getRecords(_options: { from: string; to: string; types?: RecordType[] }): Promise<never> {
     return Promise.reject(notConnected());
   }
