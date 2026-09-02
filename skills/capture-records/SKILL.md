@@ -5,7 +5,7 @@ description: Capture a personal journal entry or save a note in the user's recor
 
 # Capture Records
 
-Use the connected Log Reflect tools as the source of truth for writes.
+Use the connected Capture & Reflect tools as the source of truth for writes.
 
 - Use `capture_journal` for lived experience, events, feelings, observations, or daily reflection.
 - Use `capture_note` for articles, books, podcasts, videos, courses, conversations, quotations, links, things learned, or ideas prompted by outside material.
