@@ -1,6 +1,6 @@
-# log-reflect-mcp
+# Capture & Reflect
 
-`log-reflect-mcp` is an MCP server and ChatGPT plugin scaffold for a personal recording system. It lets an AI client capture and retrieve Markdown records, including photo attachments, through natural language while keeping the records in a separate local or GitHub repository.
+`log-reflect-mcp` is the open-source MCP server behind **Capture & Reflect**, a personal capture and reflection system. It lets an AI client capture and retrieve Markdown journals and notes, including photo attachments, through natural language while keeping the records in a separate local or GitHub repository.
 
 It is designed to work with the directory conventions used by [`log-reflect-practice`](https://github.com/sunling/log-reflect-practice):
 
@@ -128,7 +128,7 @@ The production architecture uses WorkOS AuthKit for MCP OAuth, a GitHub App for 
 4. Create a Netlify site from this repository, attach the stable custom domain, and configure every variable in `.env.production.example` as a secret environment variable.
 5. Connect `https://YOUR_DOMAIN/mcp` in ChatGPT, complete the domain verification challenge, scan the tools and Skills, run the review test cases, and submit the plugin for review. Scan again after every deployed tool or Skill change because ChatGPT imports a snapshot.
 
-When a user saves a repository connection, Log & Reflect initializes any missing canonical directories with harmless `.gitkeep` files:
+When a user saves a repository connection, Capture & Reflect initializes any missing canonical directories with harmless `.gitkeep` files:
 
 ```text
 notes/
