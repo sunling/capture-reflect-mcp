@@ -65,13 +65,13 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
   return html("Connect your records", `
     <div class="eyebrow">✓ GitHub authorized</div>
     <h1>Choose where your records live</h1>
-    <p class="lede">Log &amp; Reflect writes your journals and notes directly to a GitHub repository you control.</p>
+    <p class="lede">Capture &amp; Reflect writes your journals and notes directly to a GitHub repository you control.</p>
     <form method="post" action="/setup/repository">
       <input type="hidden" name="token" value="${escapeHtml(token)}">
       <div class="field">
         <label for="repository">Records repository</label>
         <select id="repository" name="repository" required>${options}</select>
-        <p class="hint">Only repositories granted to the Log &amp; Reflect GitHub App appear here.</p>
+        <p class="hint">Only repositories granted to the Capture &amp; Reflect GitHub App appear here.</p>
       </div>
       <div class="field">
         <label for="timezone">Time zone</label>
@@ -79,7 +79,7 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
         <p class="hint">Used to decide which date your journals and notes belong to.</p>
       </div>
       <button type="submit">Save &amp; connect</button>
-      <div class="privacy-note"><span>●</span><div>Your writing and images go directly to the GitHub repository you choose. Log &amp; Reflect stores only the encrypted connection details needed to access it.</div></div>
+      <div class="privacy-note"><span>●</span><div>Your writing and images go directly to the GitHub repository you choose. Capture &amp; Reflect stores only the encrypted connection details needed to access it.</div></div>
     </form>
     <script>
       (() => {
@@ -132,7 +132,7 @@ async function saveRepository(request: Request): Promise<Response> {
     <div class="eyebrow">Connection saved</div>
     <h1>You're all set</h1>
     <p class="lede">Your records will be stored in <span class="repo">${escapeHtml(repository.full_name)}</span>.</p>
-    <p class="hint">You can close this page and return to ChatGPT. Log &amp; Reflect will use your selected repository and time zone from now on.</p>
+    <p class="hint">You can close this page and return to ChatGPT. Capture &amp; Reflect will use your selected repository and time zone from now on.</p>
     <div class="privacy-note"><span>●</span><div>Your repository is ready with journals, notes, and reviews folders.</div></div>
   `);
 }
