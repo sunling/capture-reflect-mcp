@@ -100,8 +100,8 @@ describe("GitHubRecordsStore", () => {
 
     await expect(store.initializeRepository()).resolves.toEqual({
       created: [
-        "daily/notes/.gitkeep",
-        "daily/journals/.gitkeep",
+        "notes/.gitkeep",
+        "journals/.gitkeep",
         "reviews/.gitkeep",
       ],
     });
@@ -157,7 +157,7 @@ describe("GitHubRecordsStore", () => {
     });
 
     expect(created.attachmentPaths).toEqual([
-      "daily/journals/2026/202608/images/20260831-散步-1.jpg",
+      "journals/2026/202608/images/20260831-散步-1.jpg",
     ]);
     expect(api.files.get(created.attachmentPaths[0]!)?.content).toEqual(image);
     expect(api.files.get(created.path)?.content.toString("utf8")).toContain(
