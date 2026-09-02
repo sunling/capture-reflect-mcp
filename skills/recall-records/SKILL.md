@@ -1,6 +1,6 @@
 ---
 name: recall-records
-description: Search and recall something from the user's personal journal entries and input notes. Use when the user asks whether, when, or how they previously mentioned a person, topic, feeling, event, phrase, or idea.
+description: Search and recall something from the user's personal journal entries and notes. Use when the user asks whether, when, or how they previously mentioned a person, topic, feeling, event, phrase, or idea.
 ---
 
 # Recall Records

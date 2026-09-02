@@ -5,16 +5,16 @@ import {
   assertDate,
   assertKeyword,
   attachmentMarkdown,
-  buildInputDocument,
   buildJournalFragment,
+  buildNoteDocument,
   compactDate,
-  inputDirectory,
   journalFileName,
+  noteDirectory,
   recordDateFromPath,
 } from "./record-utils.js";
 import type {
-  CaptureInputInput,
   CaptureJournalInput,
+  CaptureNoteInput,
   CaptureResult,
   RecordAttachment,
   RecordsStore,
@@ -58,7 +58,7 @@ export class LocalRecordsStore implements RecordsStore {
     const compact = compactDate(input.date);
     const year = compact.slice(0, 4);
     const month = compact.slice(0, 6);
-    const directory = path.join(this.#root, "daily", "journal", year, month);
+    const directory = path.join(this.#root, "journals", year, month);
     await fs.mkdir(directory, { recursive: true });
 
     const existing = (await fs.readdir(directory)).filter(
@@ -100,34 +100,34 @@ export class LocalRecordsStore implements RecordsStore {
     };
   }
 
-  async captureInput(
-    input: CaptureInputInput,
+  async captureNote(
+    note: CaptureNoteInput,
   ): Promise<CaptureResult & { action: "created" }> {
-    assertDate(input.date);
-    assertKeyword(input.keyword);
+    assertDate(note.date);
+    assertKeyword(note.keyword);
 
-    const compact = compactDate(input.date);
-    const directory = path.join(this.#root, inputDirectory(input.date));
+    const compact = compactDate(note.date);
+    const directory = path.join(this.#root, noteDirectory(note.date));
     await fs.mkdir(directory, { recursive: true });
 
-    const filePath = path.join(directory, `${compact}-${input.keyword}.md`);
+    const filePath = path.join(directory, `${compact}-${note.keyword}.md`);
     try {
       await fs.access(filePath);
-      throw new Error(`An input record already exists at ${path.relative(this.#root, filePath)}.`);
+      throw new Error(`A note already exists at ${path.relative(this.#root, filePath)}.`);
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
 
     const storedAttachments = await this.#writeAttachments(
-      "input",
-      input.date,
-      input.keyword,
-      input.attachments ?? [],
+      "note",
+      note.date,
+      note.keyword,
+      note.attachments ?? [],
     );
     const imageMarkdown = attachmentMarkdown(storedAttachments);
-    const document = buildInputDocument({
-      ...input,
-      content: imageMarkdown ? `${input.content.trim()}\n\n${imageMarkdown}` : input.content,
+    const document = buildNoteDocument({
+      ...note,
+      content: imageMarkdown ? `${note.content.trim()}\n\n${imageMarkdown}` : note.content,
     });
 
     await fs.writeFile(filePath, document, { encoding: "utf8", flag: "wx" });
@@ -149,8 +149,8 @@ export class LocalRecordsStore implements RecordsStore {
     const compact = compactDate(date);
     const year = compact.slice(0, 4);
     const month = compact.slice(0, 6);
-    const category = type === "journal" ? "journal" : "input";
-    const directory = path.join(this.#root, "daily", category, year, month, "images");
+    const category = type === "journal" ? "journals" : "notes";
+    const directory = path.join(this.#root, category, year, month, "images");
     await fs.mkdir(directory, { recursive: true });
 
     const stored: Array<{ path: string; alt: string }> = [];
@@ -183,16 +183,13 @@ export class LocalRecordsStore implements RecordsStore {
     assertDate(options.to);
     if (options.from > options.to) throw new Error("from must be on or before to.");
 
-    const requested = new Set(options.types ?? ["journal", "input"]);
+    const requested = new Set(options.types ?? ["journal", "note"]);
     const roots = [
       ...(requested.has("journal")
-        ? [{ type: "journal" as const, path: path.join(this.#root, "daily", "journal") }]
+        ? [{ type: "journal" as const, path: path.join(this.#root, "journals") }]
         : []),
-      ...(requested.has("input")
-        ? [
-            { type: "input" as const, path: path.join(this.#root, "daily", "input") },
-            { type: "input" as const, path: path.join(this.#root, "daily", "inputs") },
-          ]
+      ...(requested.has("note")
+        ? [{ type: "note" as const, path: path.join(this.#root, "notes") }]
         : []),
     ];
 

@@ -100,8 +100,8 @@ describe("GitHubRecordsStore", () => {
 
     await expect(store.initializeRepository()).resolves.toEqual({
       created: [
-        "daily/input/.gitkeep",
-        "daily/journal/.gitkeep",
+        "notes/.gitkeep",
+        "journals/.gitkeep",
         "reviews/.gitkeep",
       ],
     });
@@ -157,7 +157,7 @@ describe("GitHubRecordsStore", () => {
     });
 
     expect(created.attachmentPaths).toEqual([
-      "daily/journal/2026/202608/images/20260831-散步-1.jpg",
+      "journals/2026/202608/images/20260831-散步-1.jpg",
     ]);
     expect(api.files.get(created.attachmentPaths[0]!)?.content).toEqual(image);
     expect(api.files.get(created.path)?.content.toString("utf8")).toContain(
@@ -165,21 +165,21 @@ describe("GitHubRecordsStore", () => {
     );
   });
 
-  it("does not overwrite an existing input note", async () => {
+  it("does not overwrite an existing note", async () => {
     const api = new FakeGitHubApi();
     const store = createStore(api);
-    const input = {
+    const note = {
       date: "2026-08-31",
       title: "一篇文章",
       keyword: "文章",
       content: "值得保留。",
     };
 
-    await store.captureInput(input);
-    await expect(store.captureInput(input)).rejects.toThrow("already exists");
+    await store.captureNote(note);
+    await expect(store.captureNote(note)).rejects.toThrow("already exists");
   });
 
-  it("retrieves and searches only journal and input Markdown files", async () => {
+  it("retrieves and searches only journal and note Markdown files", async () => {
     const api = new FakeGitHubApi();
     const store = createStore(api);
     await store.captureJournal({
@@ -188,7 +188,7 @@ describe("GitHubRecordsStore", () => {
       keyword: "咖啡店",
       content: "在咖啡店看见有人写纸质日记。",
     });
-    await store.captureInput({
+    await store.captureNote({
       date: "2026-08-31",
       title: "创作",
       keyword: "创作",
@@ -201,20 +201,7 @@ describe("GitHubRecordsStore", () => {
 
     expect(records).toHaveLength(2);
     expect(matches).toHaveLength(1);
-    expect(matches[0]?.type).toBe("input");
+    expect(matches[0]?.type).toBe("note");
   });
 
-  it("continues to read input notes from the legacy plural directory", async () => {
-    const api = new FakeGitHubApi();
-    const store = createStore(api);
-    api.files.set("daily/inputs/2026/202608/20260829-legacy.md", {
-      content: Buffer.from("旧目录中的记录"),
-      sha: "legacy",
-    });
-
-    const records = await store.getRecords({ from: "2026-08-29", to: "2026-08-29" });
-
-    expect(records).toHaveLength(1);
-    expect(records[0]?.type).toBe("input");
-  });
 });
