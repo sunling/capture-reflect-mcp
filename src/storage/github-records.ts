@@ -2,17 +2,17 @@ import {
   assertDate,
   assertKeyword,
   attachmentMarkdown,
-  buildInputDocument,
   buildJournalFragment,
+  buildNoteDocument,
   compactDate,
-  inputDirectory,
   journalDirectory,
   journalFileName,
+  noteDirectory,
   recordDateFromPath,
 } from "./record-utils.js";
 import type {
-  CaptureInputInput,
   CaptureJournalInput,
+  CaptureNoteInput,
   CaptureResult,
   RecordAttachment,
   RecordsStore,
@@ -100,7 +100,7 @@ export class GitHubRecordsStore implements RecordsStore {
 
   async initializeRepository(): Promise<{ created: string[] }> {
     const created: string[] = [];
-    for (const directory of ["daily/input", "daily/journal", "reviews"]) {
+    for (const directory of ["daily/note", "daily/journal", "reviews"]) {
       if ((await this.#listDirectory(directory)).length > 0) continue;
       const marker = `${directory}/.gitkeep`;
       try {
@@ -189,37 +189,37 @@ export class GitHubRecordsStore implements RecordsStore {
     }
   }
 
-  async captureInput(
-    input: CaptureInputInput,
+  async captureNote(
+    note: CaptureNoteInput,
   ): Promise<CaptureResult & { action: "created" }> {
-    assertDate(input.date);
-    assertKeyword(input.keyword);
+    assertDate(note.date);
+    assertKeyword(note.keyword);
 
-    const filePath = `${inputDirectory(input.date)}/${compactDate(input.date)}-${input.keyword}.md`;
-    const existing = await this.#listDirectory(inputDirectory(input.date));
+    const filePath = `${noteDirectory(note.date)}/${compactDate(note.date)}-${note.keyword}.md`;
+    const existing = await this.#listDirectory(noteDirectory(note.date));
     if (existing.some((entry) => entry.type === "file" && entry.path === filePath)) {
-      throw new Error(`An input record already exists at ${filePath}.`);
+      throw new Error(`A note already exists at ${filePath}.`);
     }
 
     const storedAttachments = await this.#writeAttachments(
-      "input",
-      input.date,
-      input.keyword,
-      input.attachments ?? [],
+      "note",
+      note.date,
+      note.keyword,
+      note.attachments ?? [],
     );
     const imageMarkdown = attachmentMarkdown(storedAttachments);
     try {
       await this.#putFile(
         filePath,
-        buildInputDocument({
-          ...input,
-          content: imageMarkdown ? `${input.content.trim()}\n\n${imageMarkdown}` : input.content,
+        buildNoteDocument({
+          ...note,
+          content: imageMarkdown ? `${note.content.trim()}\n\n${imageMarkdown}` : note.content,
         }),
-        `log-reflect: record input for ${input.date}`,
+        `log-reflect: save note for ${note.date}`,
       );
     } catch (error) {
       if (error instanceof GitHubApiError && error.status === 422) {
-        throw new Error(`An input record already exists at ${filePath}.`);
+        throw new Error(`A note already exists at ${filePath}.`);
       }
       throw error;
     }
@@ -238,7 +238,7 @@ export class GitHubRecordsStore implements RecordsStore {
   ): Promise<Array<{ path: string; alt: string }>> {
     if (attachments.length === 0) return [];
 
-    const baseDirectory = type === "journal" ? journalDirectory(date) : inputDirectory(date);
+    const baseDirectory = type === "journal" ? journalDirectory(date) : noteDirectory(date);
     const imageDirectory = `${baseDirectory}/images`;
     const existingNames = new Set(
       (await this.#listDirectory(imageDirectory))
@@ -284,10 +284,10 @@ export class GitHubRecordsStore implements RecordsStore {
     assertDate(options.to);
     if (options.from > options.to) throw new Error("from must be on or before to.");
 
-    const requested = new Set(options.types ?? ["journal", "input"]);
+    const requested = new Set(options.types ?? ["journal", "note"]);
     const paths = (await this.#listRecordPaths()).filter((filePath) => {
       const date = recordDateFromPath(filePath);
-      const type = filePath.startsWith("daily/journal/") ? "journal" : "input";
+      const type = filePath.startsWith("daily/journal/") ? "journal" : "note";
       return Boolean(
         date && date >= options.from && date <= options.to && requested.has(type),
       );
@@ -298,7 +298,7 @@ export class GitHubRecordsStore implements RecordsStore {
       return {
         path: filePath,
         date: recordDateFromPath(filePath)!,
-        type: filePath.startsWith("daily/journal/") ? "journal" : "input",
+        type: filePath.startsWith("daily/journal/") ? "journal" : "note",
         content: file.content,
       };
     });
@@ -378,7 +378,7 @@ export class GitHubRecordsStore implements RecordsStore {
         (filePath) =>
           filePath.endsWith(".md") &&
           (filePath.startsWith("daily/journal/") ||
-            filePath.startsWith("daily/input/")),
+            filePath.startsWith("daily/note/")),
       );
   }
 
