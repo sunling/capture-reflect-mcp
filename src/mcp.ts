@@ -4,7 +4,7 @@ import { downloadImageAttachments } from "./attachments.js";
 import { registerSkills } from "./skill-catalog.js";
 import type { RecordsStore } from "./storage/records-store.js";
 
-const recordTypeSchema = z.enum(["journal", "input"]);
+const recordTypeSchema = z.enum(["journal", "note"]);
 
 const captureResultSchema = z.object({
   path: z.string(),
@@ -56,10 +56,10 @@ export function createServer(
   setup?: SetupLinkProvider,
 ): McpServer {
   const server = new McpServer(
-    { name: "log-reflect-mcp", version: "0.5.0" },
+    { name: "log-reflect-mcp", version: "0.6.0" },
     {
       instructions:
-        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_input for external material or ideas. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not add conclusions the user did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records.",
+        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not add conclusions the user did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records.",
     },
   );
 
@@ -133,11 +133,11 @@ export function createServer(
   );
 
   server.registerTool(
-    "capture_input",
+    "capture_note",
     {
-      title: "Record an external input",
+      title: "Save a note",
       description:
-        "Record an external input in any language when the user asks to save an article, book, podcast, video, course, conversation, quotation, link, or an idea prompted by outside material. Preserve the source language and the user's response language, including code-switching; never translate unless explicitly requested. Keep the source and the user's own response distinguishable.",
+        "Save a note in any language when the user asks to keep an article, book, podcast, video, course, conversation, quotation, link, something they learned, or an idea prompted by outside material. Preserve the source language and the user's response language, including code-switching; never translate unless explicitly requested. Keep the source and the user's own response distinguishable.",
       inputSchema: z.object({
         date: z
           .string()
@@ -178,7 +178,7 @@ export function createServer(
     async ({ date, title, keyword, content, tags, source, attachments }) => {
       const images = await downloadImageAttachments(attachments ?? []);
       return toolResult({
-        ...(await store.captureInput({
+        ...(await store.captureNote({
           date: date ?? currentDate(timeZone),
           title,
           keyword,
@@ -196,7 +196,7 @@ export function createServer(
     {
       title: "Read records by date range",
       description:
-        "Read journal entries and input notes in any language within an inclusive date range. Use this before weekly or monthly reviews and whenever the user asks what they recorded during a period. Preserve source-language quotations; explain or summarize in the language of the user's request.",
+        "Read journal entries and notes in any language within an inclusive date range. Use this before weekly or monthly reviews and whenever the user asks what they recorded during a period. Preserve source-language quotations; explain or summarize in the language of the user's request.",
       inputSchema: z.object({
         from: z.string().describe("Inclusive start date in YYYY-MM-DD"),
         to: z.string().describe("Inclusive end date in YYYY-MM-DD"),
@@ -220,7 +220,7 @@ export function createServer(
     {
       title: "Search personal records",
       description:
-        "Search journal entries and input notes for words or phrases in any language. Use the user's original search terms when possible. Use this when the user asks whether, when, or how they previously mentioned a person, topic, feeling, event, or idea.",
+        "Search journal entries and notes for words or phrases in any language. Use the user's original search terms when possible. Use this when the user asks whether, when, or how they previously mentioned a person, topic, feeling, event, or idea.",
       inputSchema: z.object({
         query: z.string().min(1),
         from: z.string().optional().describe("Optional start date in YYYY-MM-DD"),
