@@ -1,13 +1,13 @@
 {
-  "name": "log-reflect",
+  "name": "capture-reflect",
   "version": "0.6.0",
   "description": "Capture multilingual journals, photos, and Markdown records; recall past notes and review patterns through natural language.",
   "author": {
     "name": "Sun Ling",
     "url": "https://bysunling.com"
   },
-  "homepage": "https://github.com/sunling/log-reflect-mcp",
-  "repository": "https://github.com/sunling/log-reflect-mcp",
+  "homepage": "https://github.com/sunling/capture-reflect-mcp",
+  "repository": "https://github.com/sunling/capture-reflect-mcp",
   "license": "MIT",
   "keywords": [
     "journaling",
