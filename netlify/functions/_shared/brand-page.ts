@@ -24,8 +24,8 @@ export function brandPage(options: BrandPageOptions): Response {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="theme-color" content="#155b43">
-  <meta name="description" content="A quiet place to record what happened and reflect on what matters, stored in your own GitHub repository.">
-  <title>${escapeHtml(options.title)} · Log &amp; Reflect</title>
+  <meta name="description" content="Capture what matters now and return to it when you have space, stored in your own GitHub repository.">
+  <title>${escapeHtml(options.title)} · Capture &amp; Reflect</title>
   <style>
     :root {
       color-scheme: light;
@@ -117,9 +117,9 @@ export function brandPage(options: BrandPageOptions): Response {
     <header class="site-header">
       <a class="brand" href="/">
         <img src="${logoUrl}" alt="" width="52" height="52" referrerpolicy="no-referrer">
-        <span>Log &amp; Reflect</span>
+        <span>Capture &amp; Reflect</span>
       </a>
-      <span class="brand-note">Write · Revisit · Reflect</span>
+      <span class="brand-note">Capture · Revisit · Reflect</span>
     </header>
     <main>${options.body}</main>
     <footer class="site-footer">
