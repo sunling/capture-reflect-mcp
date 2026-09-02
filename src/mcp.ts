@@ -115,7 +115,7 @@ export function createServer(
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
-        openWorldHint: false,
+        openWorldHint: true,
       },
     },
     async ({ date, title, keyword, content, attachments }) => {
@@ -172,7 +172,7 @@ export function createServer(
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
-        openWorldHint: false,
+        openWorldHint: true,
       },
     },
     async ({ date, title, keyword, content, tags, source, attachments }) => {
