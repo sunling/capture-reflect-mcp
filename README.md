@@ -6,14 +6,15 @@ It is designed to work with the directory conventions used by [`log-reflect-prac
 
 ```text
 daily/
-├── journal/{YYYY}/{YYYYMM}/
-└── note/{YYYY}/{YYYYMM}/
+├── journals/{YYYY}/{YYYYMM}/
+└── notes/{YYYY}/{YYYYMM}/
 reviews/
 ```
 
-> Upgrading to 0.6.0: move any existing files from `daily/input/` or the older
-> `daily/inputs/` directory into `daily/note/` before deploying. Version 0.6.0
-> intentionally uses only the new note path.
+> Upgrading to 0.6.0: move existing journal files from `daily/journal/` to
+> `daily/journals/`. Move notes from `daily/note/`, `daily/input/`, or the older
+> `daily/inputs/` directory to `daily/notes/`. Version 0.6.0 intentionally uses
+> only the new plural collection paths.
 
 ## Current scope
 
@@ -40,7 +41,7 @@ Examples include “记录一下今天发生的事”, “Save this reflection�
 ## Safety boundaries
 
 - The source repository contains no personal records or credentials.
-- The server can only read `daily/journal/` and `daily/note/`.
+- The server can only read `daily/journals/` and `daily/notes/`.
 - New records are written only inside those two directories.
 - Existing note files are never silently overwritten.
 - If more than one journal file exists for a date, the write stops instead of guessing.
@@ -79,8 +80,8 @@ RECORDS_TIME_ZONE=America/Los_Angeles
 
 Each capture creates a GitHub commit immediately. Journal
 fragments for the same day are appended to the existing file with conflict retries; an existing
-note is never overwritten. Reading and search remain limited to `daily/journal/` and
-`daily/note/`.
+note is never overwritten. Reading and search remain limited to `daily/journals/` and
+`daily/notes/`.
 
 The GitHub token used by this MCP server is separate from any GitHub connector authorization in
 ChatGPT. Never commit `.env`; it is already excluded by `.gitignore`.
@@ -115,8 +116,8 @@ Once connected, try: “帮我记录今天的日记”“把这张照片放进�
 In ChatGPT, attach one or more images to the message that asks to record a journal entry or save a note. Supported source formats are JPEG, PNG, WebP, HEIC, and AVIF. The plugin downloads the temporary ChatGPT file URL, normalizes the image, and stores it beside the Markdown record:
 
 ```text
-daily/journal/{YYYY}/{YYYYMM}/images/
-daily/note/{YYYY}/{YYYYMM}/images/
+daily/journals/{YYYY}/{YYYYMM}/images/
+daily/notes/{YYYY}/{YYYYMM}/images/
 ```
 
 The record contains relative Markdown image links, so it remains portable when the records repository is cloned or viewed on GitHub. Original EXIF metadata is not retained. Non-image attachments are rejected in this version.
@@ -136,8 +137,8 @@ The production architecture uses WorkOS AuthKit for MCP OAuth, a GitHub App for 
 When a user saves a repository connection, Log & Reflect initializes any missing canonical directories with harmless `.gitkeep` files:
 
 ```text
-daily/note/
-daily/journal/
+daily/notes/
+daily/journals/
 reviews/
 ```
 
