@@ -70,8 +70,8 @@ describe("LocalRecordsStore", () => {
     );
   });
 
-  it("creates an input note and retrieves it by date", async () => {
-    const created = await store.captureInput({
+  it("creates a note and retrieves it by date", async () => {
+    const created = await store.captureNote({
       date: "2026-08-23",
       title: "Energetic charge",
       keyword: "生命力",
@@ -81,7 +81,7 @@ describe("LocalRecordsStore", () => {
     });
     const records = await store.getRecords({ from: "2026-08-23", to: "2026-08-23" });
 
-    expect(created.path).toBe("daily/input/2026/202608/20260823-生命力.md");
+    expect(created.path).toBe("daily/note/2026/202608/20260823-生命力.md");
     expect(records).toHaveLength(1);
     expect(records[0]?.content).toContain('source: "The Creative Act"');
   });
@@ -90,7 +90,7 @@ describe("LocalRecordsStore", () => {
     const newRoot = path.join(root, "not-created-yet", "records");
     const newStore = new LocalRecordsStore(newRoot);
 
-    const created = await newStore.captureInput({
+    const created = await newStore.captureNote({
       date: "2026-08-27",
       title: "零配置记录",
       keyword: "开始",
