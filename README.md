@@ -11,6 +11,10 @@ daily/
 reviews/
 ```
 
+> Upgrading to 0.6.0: move any existing files from `daily/input/` or the older
+> `daily/inputs/` directory into `daily/note/` before deploying. Version 0.6.0
+> intentionally uses only the new note path.
+
 ## Current scope
 
 The local server exposes four record tools. The hosted service also exposes a secure setup tool:
