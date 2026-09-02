@@ -4,7 +4,7 @@ import { brandPage, escapeHtml } from "./_shared/brand-page.js";
 const legalPages: Record<string, { title: string; body: string }> = {
   "/privacy": {
     title: "Privacy Policy",
-    body: "Log & Reflect processes your ChatGPT identity and encrypted GitHub authorization only to read and write the repository you select. Your journals, notes, reviews, and images are sent directly to GitHub and are not stored in our database. You may revoke access by uninstalling the GitHub App. Contact support for deletion requests.",
+    body: "Capture & Reflect processes your ChatGPT identity and encrypted GitHub authorization only to read and write the repository you select. Your journals, notes, reviews, and images are sent directly to GitHub and are not stored in our database. You may revoke access by uninstalling the GitHub App. Contact support for deletion requests.",
   },
   "/terms": {
     title: "Terms of Service",
@@ -14,7 +14,7 @@ const legalPages: Record<string, { title: string; body: string }> = {
 
 function homePage(): Response {
   return brandPage({
-    title: "A quiet place to record and reflect",
+    title: "A quiet place to capture and reflect",
     layout: "wide",
     cacheControl: "public, max-age=300",
     body: `
@@ -22,7 +22,7 @@ function homePage(): Response {
         <div>
           <div class="eyebrow">Private by design</div>
           <h1>Keep what happened.<br><em>Return to what matters.</em></h1>
-          <p class="lede">Log &amp; Reflect helps you capture journals, notes, and images in conversation—then revisit them with the language and perspective that feel natural to you.</p>
+          <p class="lede">Capture &amp; Reflect helps you capture journals, notes, and images in conversation—then revisit them with the language and perspective that feel natural to you.</p>
           <div class="actions">
             <a class="button" href="https://github.com/sunling/log-reflect-mcp">View the open-source project</a>
             <a class="button secondary" href="/support">Get support</a>
@@ -34,14 +34,14 @@ function homePage(): Response {
           <div class="paper-eye" aria-hidden="true"></div>
         </div>
       </section>
-      <section class="principles" aria-label="How Log and Reflect works">
-        <article class="principle"><div class="number">01</div><h2>Record</h2><p>Write naturally in any language. A journal, a passing note, or an image can all belong.</p></article>
+      <section class="principles" aria-label="How Capture and Reflect works">
+        <article class="principle"><div class="number">01</div><h2>Capture</h2><p>Capture naturally in any language. A journal, a passing note, an idea, or an image can all belong.</p></article>
         <article class="principle"><div class="number">02</div><h2>Revisit</h2><p>Your records stay as readable files in GitHub, organized so both you and AI can find them again.</p></article>
         <article class="principle"><div class="number">03</div><h2>Reflect</h2><p>Look back across days and seasons to notice patterns, changes, and what still deserves attention.</p></article>
       </section>
       <section class="trust">
         <h2>Your repository is the source of truth.</h2>
-        <p>Log &amp; Reflect writes your content and images directly to the GitHub repository you choose. It stores only the encrypted connection details needed to reach that repository—not a second copy of your writing.</p>
+        <p>Capture &amp; Reflect writes your content and images directly to the GitHub repository you choose. It stores only the encrypted connection details needed to reach that repository—not a second copy of your writing.</p>
       </section>
     `,
   });
@@ -50,7 +50,7 @@ function homePage(): Response {
 function supportPage(): Response {
   return brandPage({
     title: "Support",
-    body: `<section class="reading-card"><div class="eyebrow">We are here to help</div><h1>Support</h1><p>For help, bug reports, account disconnection, or data deletion requests, open an issue in the <a href="https://github.com/sunling/log-reflect-mcp/issues">Log &amp; Reflect GitHub repository</a>.</p></section>`,
+    body: `<section class="reading-card"><div class="eyebrow">We are here to help</div><h1>Support</h1><p>For help, bug reports, account disconnection, or data deletion requests, open an issue in the <a href="https://github.com/sunling/log-reflect-mcp/issues">Capture &amp; Reflect GitHub repository</a>.</p></section>`,
   });
 }
 
@@ -62,7 +62,7 @@ export default (request: Request): Response => {
   if (!page) return new Response("Not found", { status: 404 });
   return brandPage({
     title: page.title,
-    body: `<section class="reading-card"><div class="eyebrow">Log &amp; Reflect</div><h1>${escapeHtml(page.title)}</h1><p>${escapeHtml(page.body)}</p></section>`,
+    body: `<section class="reading-card"><div class="eyebrow">Capture &amp; Reflect</div><h1>${escapeHtml(page.title)}</h1><p>${escapeHtml(page.body)}</p></section>`,
   });
 };
 
