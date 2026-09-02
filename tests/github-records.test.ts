@@ -100,7 +100,7 @@ describe("GitHubRecordsStore", () => {
 
     await expect(store.initializeRepository()).resolves.toEqual({
       created: [
-        "daily/input/.gitkeep",
+        "daily/note/.gitkeep",
         "daily/journal/.gitkeep",
         "reviews/.gitkeep",
       ],
@@ -165,21 +165,21 @@ describe("GitHubRecordsStore", () => {
     );
   });
 
-  it("does not overwrite an existing input note", async () => {
+  it("does not overwrite an existing note", async () => {
     const api = new FakeGitHubApi();
     const store = createStore(api);
-    const input = {
+    const note = {
       date: "2026-08-31",
       title: "一篇文章",
       keyword: "文章",
       content: "值得保留。",
     };
 
-    await store.captureInput(input);
-    await expect(store.captureInput(input)).rejects.toThrow("already exists");
+    await store.captureNote(note);
+    await expect(store.captureNote(note)).rejects.toThrow("already exists");
   });
 
-  it("retrieves and searches only journal and input Markdown files", async () => {
+  it("retrieves and searches only journal and note Markdown files", async () => {
     const api = new FakeGitHubApi();
     const store = createStore(api);
     await store.captureJournal({
@@ -188,7 +188,7 @@ describe("GitHubRecordsStore", () => {
       keyword: "咖啡店",
       content: "在咖啡店看见有人写纸质日记。",
     });
-    await store.captureInput({
+    await store.captureNote({
       date: "2026-08-31",
       title: "创作",
       keyword: "创作",
@@ -201,7 +201,7 @@ describe("GitHubRecordsStore", () => {
 
     expect(records).toHaveLength(2);
     expect(matches).toHaveLength(1);
-    expect(matches[0]?.type).toBe("input");
+    expect(matches[0]?.type).toBe("note");
   });
 
 });
