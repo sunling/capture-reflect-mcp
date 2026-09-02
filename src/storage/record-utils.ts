@@ -1,5 +1,5 @@
 import path from "node:path";
-import type { CaptureInputInput, CaptureJournalInput } from "./records-store.js";
+import type { CaptureJournalInput, CaptureNoteInput } from "./records-store.js";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const SAFE_KEYWORD_PATTERN = /^[\p{L}\p{N}_-]{1,40}$/u;
@@ -37,9 +37,9 @@ export function journalDirectory(date: string): string {
   return `daily/journal/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
 }
 
-export function inputDirectory(date: string): string {
+export function noteDirectory(date: string): string {
   const compact = compactDate(date);
-  return `daily/input/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
+  return `daily/note/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
 }
 
 export function journalFileName(input: CaptureJournalInput): string {
@@ -61,15 +61,15 @@ export function attachmentMarkdown(
     .join("\n\n");
 }
 
-export function buildInputDocument(input: CaptureInputInput): string {
-  const tags = input.tags?.filter(Boolean).slice(0, 3) ?? [];
+export function buildNoteDocument(note: CaptureNoteInput): string {
+  const tags = note.tags?.filter(Boolean).slice(0, 3) ?? [];
   const frontmatter = [
     "---",
-    `title: ${JSON.stringify(input.title.trim())}`,
-    `date: ${input.date}`,
-    ...(input.source ? [`source: ${JSON.stringify(input.source.trim())}`] : []),
+    `title: ${JSON.stringify(note.title.trim())}`,
+    `date: ${note.date}`,
+    ...(note.source ? [`source: ${JSON.stringify(note.source.trim())}`] : []),
     ...(tags.length > 0 ? ["tags:", ...tags.map((tag) => `  - ${JSON.stringify(tag)}`)] : []),
     "---",
   ].join("\n");
-  return `${frontmatter}\n\n${input.content.trim()}\n`;
+  return `${frontmatter}\n\n${note.content.trim()}\n`;
 }
