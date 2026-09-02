@@ -59,7 +59,7 @@ export function createServer(
     { name: "capture-reflect", version: "0.6.0" },
     {
       instructions:
-        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not add conclusions the user did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records.",
+        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not add conclusions the user did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records. When the user asks to reconnect GitHub, reconfigure the connection, change the records repository, or update the time zone, call get_github_setup_link and give them its setupUrl; ChatGPT's own reconnect action does not replace this setup flow.",
     },
   );
 
@@ -69,9 +69,9 @@ export function createServer(
     server.registerTool(
       "get_github_setup_link",
       {
-        title: "Connect a GitHub repository",
+        title: "Set up or update GitHub connection",
         description:
-          "Get the secure setup link used to authorize GitHub and choose the repository where this user's private records are stored.",
+          "Get the secure setup link used to connect GitHub, change the records repository, or refresh the user's detected time zone. Use this for initial setup and whenever the user asks to reconnect, reconfigure, change repository, or update time zone.",
         inputSchema: z.object({}),
         outputSchema: z.object({
           connected: z.boolean(),
