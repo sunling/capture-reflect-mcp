@@ -100,7 +100,7 @@ export class GitHubRecordsStore implements RecordsStore {
 
   async initializeRepository(): Promise<{ created: string[] }> {
     const created: string[] = [];
-    for (const directory of ["daily/note", "daily/journal", "reviews"]) {
+    for (const directory of ["daily/notes", "daily/journals", "reviews"]) {
       if ((await this.#listDirectory(directory)).length > 0) continue;
       const marker = `${directory}/.gitkeep`;
       try {
@@ -287,7 +287,7 @@ export class GitHubRecordsStore implements RecordsStore {
     const requested = new Set(options.types ?? ["journal", "note"]);
     const paths = (await this.#listRecordPaths()).filter((filePath) => {
       const date = recordDateFromPath(filePath);
-      const type = filePath.startsWith("daily/journal/") ? "journal" : "note";
+      const type = filePath.startsWith("daily/journals/") ? "journal" : "note";
       return Boolean(
         date && date >= options.from && date <= options.to && requested.has(type),
       );
@@ -298,7 +298,7 @@ export class GitHubRecordsStore implements RecordsStore {
       return {
         path: filePath,
         date: recordDateFromPath(filePath)!,
-        type: filePath.startsWith("daily/journal/") ? "journal" : "note",
+        type: filePath.startsWith("daily/journals/") ? "journal" : "note",
         content: file.content,
       };
     });
@@ -377,8 +377,8 @@ export class GitHubRecordsStore implements RecordsStore {
       .filter(
         (filePath) =>
           filePath.endsWith(".md") &&
-          (filePath.startsWith("daily/journal/") ||
-            filePath.startsWith("daily/note/")),
+          (filePath.startsWith("daily/journals/") ||
+            filePath.startsWith("daily/notes/")),
       );
   }
 
