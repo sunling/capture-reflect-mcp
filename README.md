@@ -1,6 +1,6 @@
 # Capture & Reflect
 
-`log-reflect-mcp` is the open-source MCP server behind **Capture & Reflect**, a personal capture and reflection system. It lets an AI client capture and retrieve Markdown journals and notes, including photo attachments, through natural language while keeping the records in a separate local or GitHub repository.
+`capture-reflect-mcp` is the open-source MCP server behind **Capture & Reflect**, a personal capture and reflection system. It lets an AI client capture and retrieve Markdown journals and notes, including photo attachments, through natural language while keeping the records in a separate local or GitHub repository.
 
 It is designed to work with the directory conventions used by [`log-reflect-practice`](https://github.com/sunling/log-reflect-practice):
 
@@ -180,9 +180,9 @@ After building, point an MCP client at the compiled server:
 ```json
 {
   "mcpServers": {
-    "log-reflect": {
+    "capture-reflect": {
       "command": "node",
-      "args": ["/absolute/path/to/log-reflect-mcp/dist/src/server.js"],
+      "args": ["/absolute/path/to/capture-reflect-mcp/dist/src/server.js"],
       "env": {
         "RECORDS_REPO_PATH": "/absolute/path/to/log-reflect-practice",
         "RECORDS_TIME_ZONE": "America/Los_Angeles"
