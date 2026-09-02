@@ -56,7 +56,7 @@ export function createServer(
   setup?: SetupLinkProvider,
 ): McpServer {
   const server = new McpServer(
-    { name: "log-reflect-mcp", version: "0.6.0" },
+    { name: "capture-reflect", version: "0.6.0" },
     {
       instructions:
         "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not add conclusions the user did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records.",
