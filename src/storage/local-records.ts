@@ -58,7 +58,7 @@ export class LocalRecordsStore implements RecordsStore {
     const compact = compactDate(input.date);
     const year = compact.slice(0, 4);
     const month = compact.slice(0, 6);
-    const directory = path.join(this.#root, "daily", "journals", year, month);
+    const directory = path.join(this.#root, "journals", year, month);
     await fs.mkdir(directory, { recursive: true });
 
     const existing = (await fs.readdir(directory)).filter(
@@ -150,7 +150,7 @@ export class LocalRecordsStore implements RecordsStore {
     const year = compact.slice(0, 4);
     const month = compact.slice(0, 6);
     const category = type === "journal" ? "journals" : "notes";
-    const directory = path.join(this.#root, "daily", category, year, month, "images");
+    const directory = path.join(this.#root, category, year, month, "images");
     await fs.mkdir(directory, { recursive: true });
 
     const stored: Array<{ path: string; alt: string }> = [];
@@ -186,10 +186,10 @@ export class LocalRecordsStore implements RecordsStore {
     const requested = new Set(options.types ?? ["journal", "note"]);
     const roots = [
       ...(requested.has("journal")
-        ? [{ type: "journal" as const, path: path.join(this.#root, "daily", "journals") }]
+        ? [{ type: "journal" as const, path: path.join(this.#root, "journals") }]
         : []),
       ...(requested.has("note")
-        ? [{ type: "note" as const, path: path.join(this.#root, "daily", "notes") }]
+        ? [{ type: "note" as const, path: path.join(this.#root, "notes") }]
         : []),
     ];
 
