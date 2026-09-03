@@ -11,7 +11,7 @@ const config: ProductionConfig = {
   supabaseSecretKey: "server-secret",
   githubClientId: "client-id",
   githubClientSecret: "client-secret",
-  githubAppSlug: "log-reflect",
+  githubAppSlug: "capture-reflect",
   tokenEncryptionKey: "encryption-secret-that-is-not-committed",
   setupTokenSecret: "setup-secret-that-is-not-committed",
 };

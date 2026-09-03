@@ -1,8 +1,8 @@
 # Capture & Reflect
 
-`capture-reflect-mcp` is the open-source MCP server behind **Capture & Reflect**, a personal capture and reflection system. It lets an AI client capture and retrieve Markdown journals and notes, including photo attachments, through natural language while keeping the records in a separate local or GitHub repository.
+`capture-reflect-mcp` is the open-source MCP server behind **Capture & Reflect**, a personal capture and reflection system. It lets an AI client capture and retrieve Markdown journal entries and notes, including photo attachments, through natural language while keeping the records in a separate local or GitHub repository.
 
-It is designed to work with the directory conventions used by [`log-reflect-practice`](https://github.com/sunling/log-reflect-practice):
+It is designed to work with the directory conventions used by [`record-reflect-practice`](https://github.com/sunling/record-reflect-practice):
 
 ```text
 journals/{YYYY}/{YYYYMM}/
@@ -14,7 +14,7 @@ reviews/
 
 The local server exposes four record tools. The hosted service also exposes a secure setup tool:
 
-- `capture_journal`: create or append a personal journal fragment, with optional photos.
+- `capture_journal`: create or append a personal journal entry fragment, with optional photos.
 - `capture_note`: save a Markdown note, with optional photos.
 - `get_records_by_date_range`: retrieve journal entries and notes for review.
 - `search_records`: search record contents.
@@ -22,9 +22,16 @@ The local server exposes four record tools. The hosted service also exposes a se
 
 The MCP server handles access and storage. It publishes three focused Agent Skills through the MCP Skills extension so ChatGPT can discover their instructions and resources:
 
-- `capture-records`: route a journal entry or note, preserve the user's voice, and pass uploaded photos through.
+- `capture-record`: route one journal entry or note, preserve the user's voice, and pass uploaded photos through.
 - `review-records`: review a date range using evidence from the stored records.
 - `recall-records`: search before answering questions about earlier records.
+
+## Terminology
+
+- `journal entry`, `note`, `review`, and `record` refer to one item.
+- `records` refers to a collection of journal entries and notes.
+- `journals/`, `notes/`, `reviews/`, and `images/` refer to actual directories. Directory names are always lowercase, plural, wrapped in backticks, and include a trailing slash.
+- Skill names follow their operation: `capture-record` writes one record, while `recall-records` and `review-records` may work across multiple records.
 
 ## Language support
 
@@ -54,8 +61,8 @@ cp .env.example .env
 npm run build
 ```
 
-By default, records are stored under `~/.log-reflect/records`, which is created on the first
-write. To use an existing local records repository instead, set its absolute path as
+For backward compatibility, the default local path remains `~/.log-reflect/records`; it is
+created on the first write. To use an existing local records repository instead, set its absolute path as
 `RECORDS_REPO_PATH` in `.env`.
 
 ### Store records directly in GitHub
@@ -163,14 +170,14 @@ Optionally set the absolute path to an existing records repository. If it is omi
 server uses `~/.log-reflect/records`:
 
 ```bash
-RECORDS_REPO_PATH=/absolute/path/to/log-reflect-practice
+RECORDS_REPO_PATH=/absolute/path/to/record-reflect-practice
 ```
 
 Build and start the stdio server (for Claude Desktop, Codex, and other local MCP clients):
 
 ```bash
 npm run build
-RECORDS_REPO_PATH=/absolute/path/to/log-reflect-practice npm run start:stdio
+RECORDS_REPO_PATH=/absolute/path/to/record-reflect-practice npm run start:stdio
 ```
 
 ## Example client configuration
@@ -184,7 +191,7 @@ After building, point an MCP client at the compiled server:
       "command": "node",
       "args": ["/absolute/path/to/capture-reflect-mcp/dist/src/server.js"],
       "env": {
-        "RECORDS_REPO_PATH": "/absolute/path/to/log-reflect-practice",
+        "RECORDS_REPO_PATH": "/absolute/path/to/record-reflect-practice",
         "RECORDS_TIME_ZONE": "America/Los_Angeles"
       }
     }
@@ -212,6 +219,5 @@ npx @modelcontextprotocol/inspector node dist/src/server.js
 ## Roadmap
 
 - Add MCP resources for reading individual records.
-- Add an explicit develop-practice workflow after the review and recall Skills have been exercised in real use.
 - Complete domain verification, privacy policy, tool scanning, test prompts, and ChatGPT plugin review.
 - Add scheduled reflection and information-bubble-breaker workflows.

@@ -1,7 +1,7 @@
 {
   "name": "capture-reflect",
   "version": "0.6.0",
-  "description": "Capture multilingual journals, photos, and Markdown records; recall past notes and review patterns through natural language.",
+  "description": "Capture multilingual journal entries, notes, and photos; recall past records and review patterns through natural language.",
   "author": {
     "name": "Sun Ling",
     "url": "https://bysunling.com"
@@ -19,7 +19,7 @@
   "interface": {
     "displayName": "Capture & Reflect",
     "shortDescription": "Capture what matters, then revisit and reflect",
-    "longDescription": "Capture journals, notes, and uploaded photos in any language in your own GitHub repository; revisit past records and reflect on patterns over time.",
+    "longDescription": "Capture journal entries, notes, and uploaded photos in any language in your own GitHub repository; revisit past records and reflect on patterns over time.",
     "developerName": "Sun Ling",
     "category": "Productivity",
     "capabilities": [

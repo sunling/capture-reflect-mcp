@@ -4,7 +4,7 @@
 
 - **Name:** Capture & Reflect
 - **Short description:** Capture what matters, then revisit and reflect.
-- **Long description:** Capture journals, notes, and uploaded photos in your own GitHub repository through natural language. Revisit earlier records, search what you captured, and reflect on patterns over time while keeping your repository as the source of truth.
+- **Long description:** Capture journal entries, notes, and uploaded photos in your own GitHub repository through natural language. Revisit earlier records, search what you captured, and reflect on patterns over time while keeping your repository as the source of truth.
 - **Category:** Productivity
 - **Website:** https://api.bysunling.com/
 - **Support:** https://api.bysunling.com/support
@@ -26,9 +26,9 @@
 ### 1. Capture a journal entry
 **Prompt:** Record that I felt scattered this morning, but after a walk I was able to focus again.
 
-**Expected behavior:** Use the capture-records skill and call `capture_journal`. Do not translate or invent conclusions. Omit the date argument when the user means today so the configured time zone is applied.
+**Expected behavior:** Use the `capture-record` Skill and call `capture_journal`. Do not translate or invent conclusions. Omit the date argument when the user means today so the configured time zone is applied.
 
-**Expected result:** A Markdown journal record is created or appended under `journals/{YYYY}/{YYYYMM}/`, and the response reports the record path.
+**Expected result:** A Markdown journal entry is created or appended under `journals/{YYYY}/{YYYYMM}/`, and the response reports the record path.
 
 **Fixture:** Connected reviewer GitHub repository.
 
@@ -53,16 +53,16 @@
 ### 4. Recall an earlier record
 **Prompt:** What did I previously record about focus?
 
-**Expected behavior:** Use the recall-records skill and call `search_records` before answering.
+**Expected behavior:** Use the `recall-records` Skill and call `search_records` before answering.
 
-**Expected result:** Return relevant records/excerpts grounded in stored journal/note content, with dates or paths so the user can locate the sources.
+**Expected result:** Return relevant records or excerpts grounded in stored journal entries and notes, with dates or paths so the user can locate the sources.
 
 **Fixture:** Reviewer repository containing at least one journal or note that includes the word “focus”.
 
 ### 5. Review the past seven days
 **Prompt:** Review my records from the past seven days. Where has my attention been going?
 
-**Expected behavior:** Use the review-records skill, resolve the inclusive seven-day range, call `get_records_by_date_range`, and identify only patterns supported by the records.
+**Expected behavior:** Use the `review-records` Skill, resolve the inclusive seven-day range, call `get_records_by_date_range`, and identify only patterns supported by the records.
 
 **Expected result:** A concise reflection grounded in retrieved records. No repository write occurs.
 

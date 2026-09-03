@@ -9,7 +9,7 @@ describe("LocalRecordsStore", () => {
   let store: LocalRecordsStore;
 
   beforeEach(async () => {
-    root = await fs.mkdtemp(path.join(os.tmpdir(), "log-reflect-mcp-"));
+    root = await fs.mkdtemp(path.join(os.tmpdir(), "capture-reflect-mcp-"));
     store = new LocalRecordsStore(root);
   });
 
