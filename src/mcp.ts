@@ -89,7 +89,7 @@ export function createServer(
     {
       title: "Record a journal entry",
       description:
-        "Record a personal journal fragment in any language when the user asks to save an experience, event, feeling, observation, or daily reflection. Lightly edit for readability while preserving the user's original language, wording, code-switching, uncertainty, and unfinished thoughts. Never translate unless explicitly requested.",
+        "Record a personal journal entry fragment in any language when the user asks to save an experience, event, feeling, observation, or daily reflection. Lightly edit for readability while preserving the user's original language, wording, code-switching, uncertainty, and unfinished thoughts. Never translate unless explicitly requested.",
       inputSchema: z.object({
         date: z
           .string()
@@ -103,7 +103,7 @@ export function createServer(
           .min(1)
           .max(40)
           .describe("Short filename keyword in the user's language when practical; Unicode letters and numbers, underscores, and hyphens are supported"),
-        content: z.string().min(1).describe("Markdown journal body in the user's original language, without translation, invented summaries, or tags"),
+        content: z.string().min(1).describe("Markdown journal entry body in the user's original language, without translation, invented summaries, or tags"),
         attachments: z
           .array(fileParamSchema)
           .max(5)

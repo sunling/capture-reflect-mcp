@@ -4,7 +4,7 @@ import { brandPage, escapeHtml } from "./_shared/brand-page.js";
 const legalPages: Record<string, { title: string; body: string }> = {
   "/privacy": {
     title: "Privacy Policy",
-    body: "Capture & Reflect processes your ChatGPT identity and encrypted GitHub authorization only to read and write the repository you select. Your journals, notes, reviews, and images are sent directly to GitHub and are not stored in our database. You may revoke access by uninstalling the GitHub App. Contact support for deletion requests.",
+    body: "Capture & Reflect processes your ChatGPT identity and encrypted GitHub authorization only to read and write the repository you select. Your journal entries, notes, and images are sent directly to GitHub and are not stored in our database. Reviews are generated in chat and are not written to your repository in this version. You may revoke access by uninstalling the GitHub App. Contact support for deletion requests.",
   },
   "/terms": {
     title: "Terms of Service",
@@ -22,7 +22,7 @@ function homePage(): Response {
         <div>
           <div class="eyebrow">Private by design</div>
           <h1>Keep what happened.<br><em>Return to what matters.</em></h1>
-          <p class="lede">Capture &amp; Reflect helps you capture journals, notes, and images in conversation—then revisit them with the language and perspective that feel natural to you.</p>
+          <p class="lede">Capture &amp; Reflect helps you capture journal entries, notes, and images in conversation—then revisit them with the language and perspective that feel natural to you.</p>
           <div class="actions">
             <a class="button" href="https://github.com/sunling/capture-reflect-mcp">View the open-source project</a>
             <a class="button secondary" href="/support">Get support</a>
@@ -35,7 +35,7 @@ function homePage(): Response {
         </div>
       </section>
       <section class="principles" aria-label="How Capture and Reflect works">
-        <article class="principle"><div class="number">01</div><h2>Capture</h2><p>Capture naturally in any language. A journal, a passing note, an idea, or an image can all belong.</p></article>
+        <article class="principle"><div class="number">01</div><h2>Capture</h2><p>Capture naturally in any language. A journal entry, a passing note, an idea, or an image can all belong.</p></article>
         <article class="principle"><div class="number">02</div><h2>Revisit</h2><p>Your records stay as readable files in GitHub, organized so both you and AI can find them again.</p></article>
         <article class="principle"><div class="number">03</div><h2>Reflect</h2><p>Look back across days and seasons to notice patterns, changes, and what still deserves attention.</p></article>
       </section>

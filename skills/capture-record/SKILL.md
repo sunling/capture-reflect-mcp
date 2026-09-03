@@ -1,15 +1,15 @@
 ---
-name: capture-records
-description: Capture a personal journal entry or save a note in the user's record repository, including uploaded photos. Use when the user asks to record, save, log, or add something to their journal or notes.
+name: capture-record
+description: Capture one personal record—a journal entry or a note—in the user's records repository, including uploaded photos. Use when the user asks to record, save, log, or add a journal entry or note.
 ---
 
-# Capture Records
+# Capture Record
 
 Use the connected Capture & Reflect tools as the source of truth for writes.
 
 - Use `capture_journal` for lived experience, events, feelings, observations, or daily reflection.
 - Use `capture_note` for articles, books, podcasts, videos, courses, conversations, quotations, links, things learned, or ideas prompted by outside material.
-- Infer journal versus note when the distinction is clear. Ask only when it materially changes where the record belongs.
+- Infer journal entry versus note when the distinction is clear. Ask only when it materially changes where the record belongs.
 
 Lightly edit for readability while preserving uncertainty, unfinished thoughts, concrete details, and the user's wording. Never invent lessons, conclusions, emotions, tags, sources, or context. For notes, keep the external material distinguishable from the user's response and use no more than three useful tags.
 

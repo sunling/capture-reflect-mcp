@@ -104,7 +104,7 @@ export class GitHubRecordsStore implements RecordsStore {
       if ((await this.#listDirectory(directory)).length > 0) continue;
       const marker = `${directory}/.gitkeep`;
       try {
-        await this.#putFile(marker, "", "log-reflect: initialize records repository");
+        await this.#putFile(marker, "", "capture-reflect: initialize records repository");
         created.push(marker);
       } catch (error) {
         if (!(error instanceof GitHubApiError) || ![404, 409, 422].includes(error.status)) {
@@ -118,7 +118,7 @@ export class GitHubRecordsStore implements RecordsStore {
         await this.#putFile(
           marker,
           "",
-          "log-reflect: initialize records repository",
+          "capture-reflect: initialize records repository",
           undefined,
           false,
         );
@@ -168,7 +168,7 @@ export class GitHubRecordsStore implements RecordsStore {
       await this.#putFile(
         filePath,
         fragment,
-        `log-reflect: record journal for ${input.date}`,
+        `capture-reflect: record journal entry for ${input.date}`,
       );
       return {
         path: filePath,
@@ -215,7 +215,7 @@ export class GitHubRecordsStore implements RecordsStore {
           ...note,
           content: imageMarkdown ? `${note.content.trim()}\n\n${imageMarkdown}` : note.content,
         }),
-        `log-reflect: save note for ${note.date}`,
+        `capture-reflect: save note for ${note.date}`,
       );
     } catch (error) {
       if (error instanceof GitHubApiError && error.status === 422) {
@@ -261,7 +261,7 @@ export class GitHubRecordsStore implements RecordsStore {
           await this.#putFile(
             filePath,
             attachment.data,
-            `log-reflect: add image for ${date}`,
+            `capture-reflect: add image for ${date}`,
           );
           existingNames.add(fileName);
           stored.push({ path: filePath, alt: attachment.alt });
@@ -348,7 +348,7 @@ export class GitHubRecordsStore implements RecordsStore {
         await this.#putFile(
           filePath,
           `${existing.content}\n${fragment}`,
-          `log-reflect: append journal for ${date}`,
+          `capture-reflect: append journal entry for ${date}`,
           existing.sha,
         );
         return;
@@ -439,7 +439,7 @@ export class GitHubRecordsStore implements RecordsStore {
         accept: "application/vnd.github+json",
         authorization: `Bearer ${this.#token}`,
         "content-type": "application/json",
-        "user-agent": "log-reflect-mcp",
+        "user-agent": "capture-reflect-mcp",
         "x-github-api-version": "2022-11-28",
       },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
