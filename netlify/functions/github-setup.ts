@@ -37,7 +37,7 @@ function cookieToken(request: Request): string | undefined {
 async function tokenAndUser(request: Request): Promise<{ token: string; userId: string }> {
   const url = new URL(request.url);
   const token = url.searchParams.get("state") ?? url.searchParams.get("token") ?? cookieToken(request);
-  if (!token) throw new Error("The setup link is missing or expired. Request a new link in ChatGPT.");
+  if (!token) throw new Error("The setup link is missing or expired. Request a new setup link from your AI client.");
   return { token, userId: await verifySetupToken(runtime, token) };
 }
 
@@ -137,7 +137,7 @@ async function saveRepository(request: Request): Promise<Response> {
     <div class="eyebrow">Connection saved</div>
     <h1>You're all set</h1>
     <p class="lede">Your records will be stored in <span class="repo">${escapeHtml(repository.full_name)}</span>.</p>
-    <p class="hint">You can close this page and return to ChatGPT. Capture &amp; Reflect will use your selected repository and time zone from now on.</p>
+    <p class="hint">You can close this page and return to your conversation. Capture &amp; Reflect will use your selected repository and time zone from now on.</p>
     <div class="privacy-note"><span>●</span><div>Your repository is ready with the <code>journals/</code>, <code>notes/</code>, and <code>reviews/</code> directories.</div></div>
   `);
 }
