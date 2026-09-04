@@ -49,6 +49,30 @@ Examples include “记录一下今天发生的事”, “Save this reflection�
 - Each capture accepts up to five image attachments. Images are resized to fit within 2048 × 2048 pixels, metadata is removed, and the processed file must be no larger than 10 MB.
 - GitHub credentials are read from the environment and are never written into records.
 
+## Connect to the hosted MCP
+
+The hosted Capture & Reflect MCP is available at:
+
+```text
+https://api.bysunling.com/mcp
+```
+
+A supported remote MCP client can connect to this endpoint and complete OAuth. On first use, Capture & Reflect provides a secure GitHub setup link so the user can authorize the GitHub App, choose the repository where records should live, and save the detected time zone.
+
+### Claude
+
+In Claude:
+
+1. Open **Customize → Connectors**.
+2. Choose **Add custom connector**.
+3. Name it `Capture & Reflect` and use `https://api.bysunling.com/mcp` as the MCP URL.
+4. Connect and complete OAuth.
+5. The first time you save a record, follow the GitHub setup link and choose your records repository.
+
+Once connected, try: “帮我记录今天的日记”, “保存一条笔记”, “回看我最近七天的记录”, or “搜索我以前关于搬家的记录”.
+
+The same hosted MCP can be used by other AI clients that support remote MCP with OAuth.
+
 ## Connect to ChatGPT Developer Mode
 
 The quickest private test uses the local HTTP server plus ChatGPT's Secure MCP Tunnel. This keeps the unauthenticated development endpoint on your own computer.
@@ -112,6 +136,12 @@ Keep both `npm run start:http` and `tunnel-client run --profile <your-profile>` 
 
 Once connected, try: “帮我记录今天的日记”“把这张照片放进今天的日记”“保存一条笔记”“回看我最近七天的记录” or “搜索我以前关于搬家的记录”.
 
+### ChatGPT plugin packaging
+
+The first ChatGPT connection creates an app identifier such as `plugin_asdk_app...`. That identifier is intentionally not committed here. It can later be placed in `.app.json` when packaging the final installable plugin.
+
+Official references: [Build an MCP server](https://developers.openai.com/plugins/build/mcp-server), [connect it to ChatGPT](https://developers.openai.com/plugins/deploy/connect-chatgpt), and [package a plugin](https://developers.openai.com/plugins/build/plugins).
+
 ### Photo attachments
 
 In a supported AI client, attach one or more images to the message that asks to record a journal entry or save a note. Supported source formats are JPEG, PNG, WebP, HEIC, and AVIF. The client passes a temporary file URL to the plugin, which normalizes the image and stores it beside the Markdown record:
@@ -152,10 +182,6 @@ The MCP server is passive: it exposes record and review capabilities but does no
 At present, scheduled reviews are read-only and are not written back to the records repository. Persisting them under `reviews/` requires a separate, narrowly scoped `save_review` MCP tool. A self-hosted alternative is a Netlify Scheduled Function plus an AI model call, but that adds model credentials, scheduling, retries, and delivery handling to this service.
 
 Never expose `SUPABASE_SECRET_KEY`, `GITHUB_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`, or `SETUP_TOKEN_SECRET` to a browser. Generate the latter two independently with a cryptographically secure random generator.
-
-The first ChatGPT connection creates an app identifier such as `plugin_asdk_app...`. That identifier is intentionally not committed here. It can later be placed in `.app.json` when packaging the final installable plugin.
-
-Official references: [Build an MCP server](https://developers.openai.com/plugins/build/mcp-server), [connect it to ChatGPT](https://developers.openai.com/plugins/deploy/connect-chatgpt), and [package a plugin](https://developers.openai.com/plugins/build/plugins).
 
 ## Local stdio setup
 
