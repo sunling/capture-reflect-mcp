@@ -32,6 +32,7 @@ describe("LocalRecordsStore", () => {
     });
 
     expect(created.action).toBe("created");
+    expect(created.path).toBe("journals/2026/202608/20260824-咖啡店.md");
     expect(appended).toEqual({
       path: created.path,
       action: "appended",
