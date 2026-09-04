@@ -2,7 +2,7 @@
 
 `capture-reflect-mcp` is the open-source MCP server behind **Capture & Reflect**, a personal capture and reflection system. It lets an AI client capture and retrieve Markdown journal entries and notes, including photo attachments, through natural language while keeping the records in a separate local or GitHub repository.
 
-It is designed to work with the directory conventions used by [`record-reflect-practice`](https://github.com/sunling/record-reflect-practice):
+It is designed to work with the directory conventions used by [`capture-reflect-practice`](https://github.com/sunling/capture-reflect-practice):
 
 ```text
 journals/{YYYY}/{YYYYMM}/
@@ -69,13 +69,22 @@ In Claude:
 4. Connect and complete OAuth.
 5. The first time you save a record, follow the GitHub setup link and choose your records repository.
 
-Once connected, try: “帮我记录今天的日记”, “保存一条笔记”, “回看我最近七天的记录”, or “搜索我以前关于搬家的记录”.
+### ChatGPT
+
+In ChatGPT with Developer mode available:
+
+1. Open **Settings → Security and login** and enable **Developer mode**.
+2. Open **Plugins** and create a developer plugin connected to the hosted MCP endpoint.
+3. Use `https://api.bysunling.com/mcp` as the MCP URL, then complete OAuth and tool scanning.
+4. The first time you save a record, follow the GitHub setup link and choose your records repository.
+
+Once connected in either client, try: “帮我记录今天的日记”, “保存一条笔记”, “回看我最近七天的记录”, or “搜索我以前关于搬家的记录”.
 
 The same hosted MCP can be used by other AI clients that support remote MCP with OAuth.
 
-## Connect to ChatGPT Developer Mode
+## Local development with ChatGPT
 
-The quickest private test uses the local HTTP server plus ChatGPT's Secure MCP Tunnel. This keeps the unauthenticated development endpoint on your own computer.
+For local development with ChatGPT, use the local HTTP server plus ChatGPT's Secure MCP Tunnel. This keeps the unauthenticated development endpoint on your own computer.
 
 Requirement: Node.js 22 or later. A local clone of your records repository is needed only for local storage.
 
@@ -142,7 +151,7 @@ The first ChatGPT connection creates an app identifier such as `plugin_asdk_app.
 
 Official references: [Build an MCP server](https://developers.openai.com/plugins/build/mcp-server), [connect it to ChatGPT](https://developers.openai.com/plugins/deploy/connect-chatgpt), and [package a plugin](https://developers.openai.com/plugins/build/plugins).
 
-### Photo attachments
+## Photo attachments
 
 In a supported AI client, attach one or more images to the message that asks to record a journal entry or save a note. Supported source formats are JPEG, PNG, WebP, HEIC, and AVIF. The client passes a temporary file URL to the plugin, which normalizes the image and stores it beside the Markdown record:
 
@@ -196,14 +205,14 @@ Optionally set the absolute path to an existing records repository. If it is omi
 server uses `~/.log-reflect/records`:
 
 ```bash
-RECORDS_REPO_PATH=/absolute/path/to/record-reflect-practice
+RECORDS_REPO_PATH=/absolute/path/to/capture-reflect-practice
 ```
 
 Build and start the stdio server (for Claude Desktop, Codex, and other local MCP clients):
 
 ```bash
 npm run build
-RECORDS_REPO_PATH=/absolute/path/to/record-reflect-practice npm run start:stdio
+RECORDS_REPO_PATH=/absolute/path/to/capture-reflect-practice npm run start:stdio
 ```
 
 ## Example client configuration
@@ -217,7 +226,7 @@ After building, point an MCP client at the compiled server:
       "command": "node",
       "args": ["/absolute/path/to/capture-reflect-mcp/dist/src/server.js"],
       "env": {
-        "RECORDS_REPO_PATH": "/absolute/path/to/record-reflect-practice",
+        "RECORDS_REPO_PATH": "/absolute/path/to/capture-reflect-practice",
         "RECORDS_TIME_ZONE": "America/Los_Angeles"
       }
     }
