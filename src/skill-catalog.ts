@@ -1,48 +1,125 @@
+import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import type { McpServer } from "@modelcontextprotocol/server";
+import * as z from "zod/v4";
+
+const SKILL_NAMES = ["capture-record", "review-records", "recall-records"] as const;
+const SKILL_URI_PREFIX = "skill://capture-reflect/";
+
+const skillResourceSchema = z.object({
+  uri: z.string(),
+  digest: z.string(),
+});
+
+const skillSchema = z.object({
+  uri: z.string(),
+  frontmatter: z.record(z.string(), z.string()),
+  resources: z.array(skillResourceSchema),
+});
+
+export interface SkillCatalogEntry {
+  uri: string;
+  frontmatter: Record<string, string>;
+  resources: Array<{ uri: string; digest: string }>;
+  content: string;
+}
+
+function skillPath(name: string): string {
+  const candidates = [
+    path.join(process.cwd(), "skills", name, "SKILL.md"),
+    fileURLToPath(new URL(`../skills/${name}/SKILL.md`, import.meta.url)),
+    fileURLToPath(new URL(`../../skills/${name}/SKILL.md`, import.meta.url)),
+  ];
+  const found = candidates.find(existsSync);
+  if (!found) throw new Error(`Unable to locate the bundled ${name} Skill.`);
+  return found;
+}
+
+function parseFrontmatter(content: string): Record<string, string> {
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/);
+  if (!match) throw new Error("Skill is missing YAML frontmatter.");
+
+  const frontmatter: Record<string, string> = {};
+  for (const line of match[1]!.split(/\r?\n/)) {
+    const separator = line.indexOf(":");
+    if (separator < 1) throw new Error(`Unsupported Skill frontmatter line: ${line}`);
+    frontmatter[line.slice(0, separator).trim()] = line.slice(separator + 1).trim();
+  }
+  if (!frontmatter.name || !frontmatter.description) {
+    throw new Error("Skill frontmatter must include name and description.");
+  }
+  return frontmatter;
+}
+
+export function loadSkillCatalog(): SkillCatalogEntry[] {
+  return SKILL_NAMES.map((name) => {
+    const content = readFileSync(skillPath(name), "utf8");
+    const frontmatter = parseFrontmatter(content);
+    if (frontmatter.name !== name) {
+      throw new Error(`Skill directory ${name} does not match frontmatter name ${frontmatter.name}.`);
+    }
+    const uri = `${SKILL_URI_PREFIX}${name}/SKILL.md`;
+    return {
+      uri,
+      frontmatter,
+      resources: [
+        {
+          uri,
+          digest: `sha256:${createHash("sha256").update(content, "utf8").digest("hex")}`,
+        },
+      ],
+      content,
+    };
+  });
+}
 
 export function registerSkills(server: McpServer): void {
-  server.registerSkill({
-    name: "capture-record",
-    title: "Capture a journal entry or note",
-    description:
-      "Capture one personal record. Route lived experience to a journal entry and encountered or learned material to a note while preserving the user's language and voice.",
-    instructions: `Use the record tools narrowly and preserve the user's own language.
+  const catalog = loadSkillCatalog();
+  const byUri = new Map(catalog.map((skill) => [skill.uri, skill]));
+  const publicSkill = ({ content: _content, ...skill }: SkillCatalogEntry) => skill;
 
-- Use \`capture_journal\` for lived experience, events, feelings, observations, and daily reflection.
-- Use \`capture_note\` for encountered or learned material such as articles, books, podcasts, videos, conversations, quotations, links, or ideas prompted by outside material.
-- Do not translate unless the user explicitly asks.
-- Preserve uncertainty, unfinished thoughts, and code-switching.
-- When the user says today or gives no date, omit the date argument so the server applies the configured time zone.
-- When GitHub is not configured, call \`get_github_setup_link\` and give the user the returned setup URL.
-- Optional image attachments may be passed through when the AI client supplies compatible temporary file URLs.`,
+  server.server.registerCapabilities({
+    extensions: { "io.modelcontextprotocol/skills": {} },
   });
 
-  server.registerSkill({
-    name: "review-records",
-    title: "Review records",
-    description:
-      "Review journal entries and notes over a date range using evidence from the stored records.",
-    instructions: `Use \`get_records_by_date_range\` before producing a review.
+  server.server.setRequestHandler(
+    "skills/list",
+    {
+      params: z.object({ cursor: z.string().optional() }),
+      result: z.object({ skills: z.array(skillSchema), nextCursor: z.string().optional() }),
+    },
+    async ({ cursor }) => ({
+      skills: cursor ? [] : catalog.map(publicSkill),
+    }),
+  );
 
-- Read the requested date range first rather than relying on conversation memory.
-- Identify patterns, changes, connections, tensions, and unfinished threads that are supported by the records.
-- Keep quotations in their original language.
-- Explain or summarize in the language of the user's current request unless they ask otherwise.
-- Do not invent motives or conclusions not supported by the records.
-- If the material is sparse, say so rather than forcing a pattern.`,
-  });
+  server.server.setRequestHandler(
+    "skills/get",
+    {
+      params: z.object({ uri: z.string() }),
+      result: z.object({ skill: skillSchema }),
+    },
+    async ({ uri }) => {
+      const skill = byUri.get(uri);
+      if (!skill) throw new Error(`Unknown Skill URI: ${uri}`);
+      return { skill: publicSkill(skill) };
+    },
+  );
 
-  server.registerSkill({
-    name: "recall-records",
-    title: "Recall earlier records",
-    description:
-      "Search personal records before answering questions about previously recorded people, topics, feelings, events, or ideas.",
-    instructions: `Use \`search_records\` when the user asks whether, when, or how they previously mentioned something.
-
-- Search using the user's original terms when possible.
-- If the question names a date range, pass that range to the search tool.
-- Distinguish what the records actually say from your interpretation.
-- Preserve source-language quotations.
-- If there is no matching record, say that no matching stored record was found rather than guessing.`,
-  });
+  for (const skill of catalog) {
+    server.registerResource(
+      skill.frontmatter.name!,
+      skill.uri,
+      {
+        title: skill.frontmatter.name!,
+        description: skill.frontmatter.description,
+        mimeType: "text/markdown",
+      },
+      async (uri) => ({
+        contents: [{ uri: uri.href, mimeType: "text/markdown", text: skill.content }],
+      }),
+    );
+  }
 }
