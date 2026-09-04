@@ -3,7 +3,6 @@ import type { CaptureJournalInput, CaptureNoteInput } from "./records-store.js";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const SAFE_KEYWORD_PATTERN = /^[\p{L}\p{N}_-]{1,40}$/u;
-const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"] as const;
 
 export function assertDate(date: string): void {
   if (!DATE_PATTERN.test(date)) {
@@ -43,9 +42,7 @@ export function noteDirectory(date: string): string {
 }
 
 export function journalFileName(input: CaptureJournalInput): string {
-  const compact = compactDate(input.date);
-  const weekday = WEEKDAYS[new Date(`${input.date}T00:00:00Z`).getUTCDay()];
-  return `${compact}-${weekday}-${input.keyword}.md`;
+  return `${compactDate(input.date)}-${input.keyword}.md`;
 }
 
 export function buildJournalFragment(input: CaptureJournalInput): string {
