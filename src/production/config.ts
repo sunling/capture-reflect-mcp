@@ -21,6 +21,8 @@ export interface ProductionConfig {
   publicOrigin: string;
   resourceUrl: string;
   workosAuthkitDomain: string;
+  workosApiKey?: string;
+  workosStandaloneEnabled?: boolean;
   supabaseUrl: string;
   supabaseSecretKey: string;
   githubClientId: string;
@@ -42,6 +44,8 @@ export function loadProductionConfig(): ProductionConfig {
       "WORKOS_AUTHKIT_DOMAIN",
       required("WORKOS_AUTHKIT_DOMAIN"),
     ),
+    workosStandaloneEnabled: runtimeEnv("WORKOS_STANDALONE_ENABLED") === "true",
+    ...(runtimeEnv("WORKOS_API_KEY")?.trim() ? { workosApiKey: runtimeEnv("WORKOS_API_KEY")!.trim() } : {}),
     supabaseUrl: httpsUrl("SUPABASE_URL", required("SUPABASE_URL")),
     supabaseSecretKey: required("SUPABASE_SECRET_KEY"),
     githubClientId: required("GITHUB_CLIENT_ID"),

@@ -39,21 +39,21 @@ async function tokenRequest(
   };
 }
 
-export function githubAuthorizeUrl(config: ProductionConfig, state: string): string {
+export function githubAuthorizeUrl(config: ProductionConfig, state: string, callbackPath = "/github/callback"): string {
   const url = new URL("https://github.com/login/oauth/authorize");
   url.searchParams.set("client_id", config.githubClientId);
-  url.searchParams.set("redirect_uri", `${config.publicOrigin}/github/callback`);
+  url.searchParams.set("redirect_uri", `${config.publicOrigin}${callbackPath}`);
   url.searchParams.set("state", state);
   url.searchParams.set("prompt", "select_account");
   return url.toString();
 }
 
-export function exchangeGitHubCode(config: ProductionConfig, code: string): Promise<GitHubTokens> {
+export function exchangeGitHubCode(config: ProductionConfig, code: string, callbackPath = "/github/callback"): Promise<GitHubTokens> {
   return tokenRequest(config, new URLSearchParams({
     client_id: config.githubClientId,
     client_secret: config.githubClientSecret,
     code,
-    redirect_uri: `${config.publicOrigin}/github/callback`,
+    redirect_uri: `${config.publicOrigin}${callbackPath}`,
   }));
 }
 
@@ -103,4 +103,11 @@ export async function listInstallationRepositories(
     token,
   );
   return value.repositories;
+}
+
+export async function getVerifiedGitHubEmail(token: string): Promise<string> {
+  const emails = await githubJson<Array<{ email: string; verified: boolean; primary: boolean }>>("/user/emails", token);
+  const email = emails.find((item) => item.verified && item.primary)?.email;
+  if (!email) throw new Error("GitHub must have a verified primary email to connect.");
+  return email;
 }

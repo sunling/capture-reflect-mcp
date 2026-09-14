@@ -11,8 +11,9 @@ function secretKey(config: ProductionConfig): Uint8Array {
 export async function createSetupToken(
   config: ProductionConfig,
   userId: string,
+  completion?: { externalAuthId: string; externalUserId: string; email: string; githubUserId: number },
 ): Promise<string> {
-  return new SignJWT({ purpose: "github-setup" })
+  return new SignJWT({ purpose: "github-setup", ...(completion ? { completion } : {}) })
     .setProtectedHeader({ alg: "HS256", typ: "JWT" })
     .setIssuer(config.resourceUrl)
     .setAudience(SETUP_AUDIENCE)
@@ -45,4 +46,30 @@ export async function createSetupUrl(
   const url = new URL("/setup", config.publicOrigin);
   url.searchParams.set("token", await createSetupToken(config, userId));
   return url.toString();
+}
+
+export async function setupCompletion(config: ProductionConfig, token: string) {
+  await verifySetupToken(config, token);
+  const { payload } = await jwtVerify(token, secretKey(config), {
+    issuer: config.resourceUrl, audience: SETUP_AUDIENCE, algorithms: ["HS256"],
+  });
+  const value = payload.completion as Record<string, unknown> | undefined;
+  if (!value) return undefined;
+  if (typeof value.externalAuthId !== "string" || typeof value.externalUserId !== "string" ||
+      typeof value.email !== "string" || typeof value.githubUserId !== "number") throw new Error("Invalid completion context.");
+  return { externalAuthId: value.externalAuthId, externalUserId: value.externalUserId, email: value.email, githubUserId: value.githubUserId };
+}
+
+export async function createLoginState(config: ProductionConfig, externalAuthId: string): Promise<string> {
+  return new SignJWT({ externalAuthId }).setProtectedHeader({ alg: "HS256" })
+    .setIssuer(config.resourceUrl).setAudience("capture-reflect-login").setIssuedAt()
+    .setExpirationTime("15m").setJti(randomUUID()).sign(secretKey(config));
+}
+
+export async function verifyLoginState(config: ProductionConfig, token: string): Promise<string> {
+  const { payload } = await jwtVerify(token, secretKey(config), {
+    issuer: config.resourceUrl, audience: "capture-reflect-login", algorithms: ["HS256"],
+  });
+  if (typeof payload.externalAuthId !== "string") throw new Error("Invalid login context.");
+  return payload.externalAuthId;
 }

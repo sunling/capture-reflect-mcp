@@ -9,7 +9,7 @@ vi.mock("../src/production/config.js", () => ({ loadProductionConfig: () => ({ p
 vi.mock("../src/production/connection-store.js", () => ({ ConnectionStore: class {
   get = mocks.get; saveAuthorization = mocks.saveAuthorization; selectRepository = mocks.selectRepository;
 } }));
-vi.mock("../src/production/setup-token.js", () => ({ verifySetupToken: mocks.verify }));
+vi.mock("../src/production/setup-token.js", () => ({ verifySetupToken: mocks.verify, setupCompletion: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("../src/production/github-auth.js", async (original) => ({
   ...await original<typeof import("../src/production/github-auth.js")>(),
   exchangeGitHubCode: mocks.exchange, getGitHubIdentity: mocks.identity,

@@ -51,6 +51,13 @@ export class ConnectionStore {
     return data ? this.#fromRow(data) : undefined;
   }
 
+  async userIdsForGitHub(githubUserId: number): Promise<string[]> {
+    const { data, error } = await this.#db.from("user_connections")
+      .select("workos_user_id").eq("github_user_id", githubUserId).limit(2);
+    if (error) throw new Error("Unable to check the existing GitHub identity mapping.");
+    return (data ?? []).map((row) => row.workos_user_id as string);
+  }
+
   async saveAuthorization(input: Omit<UserConnection, "branch" | "timeZone">): Promise<void> {
     const { error } = await this.#db.from("user_connections").upsert(
       {

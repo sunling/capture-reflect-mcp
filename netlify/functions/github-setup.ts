@@ -1,3 +1,4 @@
+import { completeConnect, resolveGitHubUser } from "../../src/production/workos-connect.js";
 import type { Config } from "@netlify/functions";
 import { brandPage, escapeHtml } from "./_shared/brand-page.js";
 import { loadProductionConfig } from "../../src/production/config.js";
@@ -5,11 +6,12 @@ import { ConnectionStore } from "../../src/production/connection-store.js";
 import {
   exchangeGitHubCode,
   getGitHubIdentity,
+  getVerifiedGitHubEmail,
   githubAuthorizeUrl,
   listInstallationRepositories,
   listInstallations,
 } from "../../src/production/github-auth.js";
-import { verifySetupToken } from "../../src/production/setup-token.js";
+import { verifySetupToken, setupCompletion } from "../../src/production/setup-token.js";
 import { GitHubRecordsStore } from "../../src/storage/github-records.js";
 
 const runtime = loadProductionConfig();
@@ -24,7 +26,8 @@ function html(title: string, body: string, status = 200): Response {
   });
 }
 
-function switchAccountLink(token: string): string {
+function switchAccountLink(token: string, externalAuthId?: string): string {
+  if (externalAuthId) return `<p><a href="/auth/login?external_auth_id=${encodeURIComponent(externalAuthId)}">Use a different GitHub account</a></p>`;
   return `<p><a href="/setup?token=${encodeURIComponent(token)}&amp;reauthorize=1">Use a different GitHub account</a></p>`;
 }
 
@@ -42,10 +45,14 @@ async function tokenAndUser(request: Request): Promise<{ token: string; userId: 
   const url = new URL(request.url);
   const token = url.searchParams.get("state") ?? url.searchParams.get("token") ?? cookieToken(request);
   if (!token) throw new Error("The setup link is missing or expired. Request a new setup link from your AI client.");
+  if (await setupCompletion(runtime, token) && cookieToken(request) !== token) {
+    throw new Error("Connection setup must continue in the browser where login started.");
+  }
   return { token, userId: await verifySetupToken(runtime, token) };
 }
 
 async function repositoryPage(userId: string, token: string): Promise<Response> {
+  const completion = await setupCompletion(runtime, token);
   const connection = await connections.get(userId);
   if (!connection) throw new Error("GitHub authorization was not found. Start setup again.");
   const installations = await listInstallations(connection.accessToken);
@@ -60,7 +67,7 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
     })),
   ))).flat();
   if (repositories.length === 0) {
-    return html("No repository selected", `<p>Edit the GitHub App installation and grant access to at least one repository, then request a new setup link.</p>${switchAccountLink(token)}`, 400);
+    return html("No repository selected", `<p>Edit the GitHub App installation and grant access to at least one repository, then request a new setup link.</p>${switchAccountLink(token, completion?.externalAuthId)}`, 400);
   }
   const options = repositories.map((repository) => {
     const value = JSON.stringify([repository.installationId, repository.full_name, repository.default_branch]);
@@ -70,7 +77,7 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
     <div class="eyebrow">✓ GitHub authorized</div>
     <h1>Choose where your records live</h1>
     <p>GitHub account: <strong>${escapeHtml(connection.githubLogin)}</strong></p>
-    ${switchAccountLink(token)}
+    ${switchAccountLink(token, completion?.externalAuthId)}
     <p class="lede">Capture &amp; Reflect writes your journal entries and notes directly to a GitHub repository you control.</p>
     <form method="post" action="/setup/repository">
       <input type="hidden" name="token" value="${escapeHtml(token)}">
@@ -110,6 +117,8 @@ async function saveRepository(request: Request): Promise<Response> {
   const form = await request.formData();
   const token = String(form.get("token") ?? "");
   const userId = await verifySetupToken(runtime, token);
+  const completion = await setupCompletion(runtime, token);
+  if (completion && cookieToken(request) !== token) throw new Error("Connection setup must continue in the browser where login started.");
   const selected = JSON.parse(String(form.get("repository") ?? "")) as unknown;
   if (!Array.isArray(selected) || selected.length !== 3) throw new Error("Invalid repository selection.");
   const [installationId, repositoryName, branch] = selected;
@@ -120,7 +129,7 @@ async function saveRepository(request: Request): Promise<Response> {
   new Intl.DateTimeFormat("en", { timeZone }).format();
   const connection = await connections.get(userId);
   if (!connection) throw new Error("GitHub authorization was not found.");
-  if (String(connection.githubUserId) !== form.get("github_user_id")) {
+  if ((completion && completion.githubUserId !== connection.githubUserId) || String(connection.githubUserId) !== form.get("github_user_id")) {
     throw new Error("The GitHub account changed. Open a new setup link and choose a repository again.");
   }
   const installations = await listInstallations(connection.accessToken);
@@ -143,6 +152,13 @@ async function saveRepository(request: Request): Promise<Response> {
     branch: selectedBranch,
     timeZone,
   });
+  if (completion) {
+    const destination = await completeConnect(runtime, completion);
+    return new Response(null, { status: 303, headers: {
+      location: destination,
+      "set-cookie": `${cookieName}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`,
+    } });
+  }
   return html("Connected", `
     <div class="success">✓</div>
     <div class="eyebrow">Connection saved</div>
@@ -158,7 +174,10 @@ async function handleRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
     if (url.pathname === "/setup" && request.method === "GET") {
       const { token, userId } = await tokenAndUser(request);
+      const completion = await setupCompletion(runtime, token);
       if (url.searchParams.get("reauthorize") === "1") {
+        if (runtime.workosStandaloneEnabled && !completion) return html("Switch GitHub account", `<h1>Reconnect to choose another account</h1><p>Disconnect and reconnect Capture &amp; Reflect in your AI client. The connection flow will open GitHub's account picker before asking you to choose a repository.</p>`);
+        if (completion) return Response.redirect(`${runtime.publicOrigin}/auth/login?external_auth_id=${encodeURIComponent(completion.externalAuthId)}`, 302);
         return new Response(null, { status: 302, headers: { location: githubAuthorizeUrl(runtime, token), "set-cookie": setupCookie(token) } });
       }
       const connection = await connections.get(userId);
@@ -171,7 +190,7 @@ async function handleRequest(request: Request): Promise<Response> {
               <p>Connected GitHub account: <strong>${escapeHtml(connection.githubLogin)}</strong></p>
               ${connection.repository ? `<p>Records repository: <span class="repo">${escapeHtml(connection.repository)}</span></p>` : "<p>Choose a repository to finish connecting.</p>"}
               <p><a href="/setup?token=${encodeURIComponent(token)}&amp;repositories=1">Choose a repository with this account</a></p>
-              ${switchAccountLink(token)}
+              ${switchAccountLink(token, completion?.externalAuthId)}
             `);
         const headers = new Headers(response.headers);
         headers.append("set-cookie", setupCookie(token));
@@ -189,6 +208,11 @@ async function handleRequest(request: Request): Promise<Response> {
       if (!code) throw new Error("GitHub did not return an authorization code.");
       const tokens = await exchangeGitHubCode(runtime, code);
       const identity = await getGitHubIdentity(tokens.accessToken);
+      if (runtime.workosStandaloneEnabled) {
+        const verifiedEmail = await getVerifiedGitHubEmail(tokens.accessToken);
+        const resolved = await resolveGitHubUser(runtime, connections, identity.id, verifiedEmail);
+        if (resolved.userId !== userId) throw new Error("To connect as a different GitHub account, disconnect and reconnect the plugin in your AI client. This setup link belongs to another account.");
+      }
       await connections.saveAuthorization({
         workosUserId: userId,
         githubUserId: identity.id,
