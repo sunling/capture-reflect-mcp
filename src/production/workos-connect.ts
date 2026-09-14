@@ -47,10 +47,21 @@ export async function completeConnect(
     external_auth_id: input.externalAuthId,
     user: { id: input.externalUserId, email: input.email },
   });
-  const url = new URL(result?.redirect_uri ?? "");
-  if (url.origin !== new URL(config.workosAuthkitDomain).origin || url.username || url.password ||
-      !["/oauth/authorize/complete", "/oauth2/authorize/complete"].includes(url.pathname)) {
-    throw new Error("WorkOS returned an unexpected completion URL.");
+  let url: URL;
+  try {
+    url = new URL(result?.redirect_uri ?? "");
+  } catch {
+    throw new Error("WorkOS returned a missing or malformed completion URL.");
   }
+  const expectedOrigin = new URL(config.workosAuthkitDomain).origin;
+  if (url.protocol !== "https:" || url.username || url.password) {
+    throw new Error("WorkOS returned an unsafe completion URL; HTTPS without embedded credentials is required.");
+  }
+  if (url.origin !== expectedOrigin) {
+    // Origins are safe to diagnose; never include codes, state, or other URL parameters.
+    throw new Error(`WorkOS completion domain mismatch: received ${url.origin}; expected ${expectedOrigin}. Check WORKOS_AUTHKIT_DOMAIN and that WORKOS_API_KEY belongs to the same WorkOS environment.`);
+  }
+  // The authenticated WorkOS API supplies the continuation path. It is not a
+  // documented fixed enum, so pin the trusted origin rather than example paths.
   return url.toString();
 }

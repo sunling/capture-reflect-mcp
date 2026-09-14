@@ -45,7 +45,19 @@ describe("WorkOS completion", () => {
     expect(await completeConnect(config, { externalAuthId: "ext", externalUserId: "github:42", email: "verified@example.com" })).toContain("auth.example.com");
     expect(JSON.parse(fetchMock.mock.calls[0]![1].body)).toEqual({ external_auth_id: "ext", user: { id: "github:42", email: "verified@example.com" } });
   });
-  it.each(["https://evil.example/oauth/authorize/complete", "https://auth.example.com/unexpected", "https://user:pass@auth.example.com/oauth/authorize/complete", "http://auth.example.com/oauth/authorize/complete"])("rejects unexpected redirect %s", async (redirect_uri) => {
+  it("accepts a provider-supplied continuation path on the configured HTTPS origin", async () => {
+    const redirect_uri = "https://auth.example.com/new-continuation?state=private-state";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ redirect_uri })));
+    await expect(completeConnect(config, { externalAuthId: "ext", externalUserId: "github:42", email: "verified@example.com" })).resolves.toBe(redirect_uri);
+  });
+  it("reports mismatched origins without leaking state or authorization codes", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ redirect_uri: "https://other.authkit.app/complete?state=secret-state&code=secret-code" })));
+    const error = await completeConnect(config, { externalAuthId: "ext", externalUserId: "github:42", email: "verified@example.com" }).catch((error: Error) => error);
+    expect(String(error)).toContain("received https://other.authkit.app; expected https://auth.example.com");
+    expect(String(error)).not.toContain("secret-state");
+    expect(String(error)).not.toContain("secret-code");
+  });
+  it.each(["https://evil.example/oauth/authorize/complete", "https://auth.example.com.evil.example/complete", "https://user:pass@auth.example.com/oauth/authorize/complete", "http://auth.example.com/oauth/authorize/complete", "javascript:alert(1)", "not-a-url", ""])("rejects unexpected redirect %s", async (redirect_uri) => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(response({ redirect_uri })));
     await expect(completeConnect(config, { externalAuthId: "ext", externalUserId: "github:42", email: "verified@example.com" })).rejects.toThrow();
   });

@@ -48,7 +48,7 @@ Do not reuse or manually edit OAuth callback URLs. Their codes, state values, an
 - GitHub credentials are stored encrypted server-side, never inside login/setup cookies. Successful GitHub authorization clears the previous repository selection and requires a fresh selection.
 - WorkOS completion runs only after repository authorization checks, initialization, and selection succeed. A failure returns an error without claiming the AI client is connected. Restart from the AI client if WorkOS's temporary authorization context expired or was already consumed.
 - New WorkOS user creation can precede consent completion. A canceled flow may leave a user/authorization record, but does not move existing personal records.
-- The returned completion URL must belong to the configured AuthKit origin and a supported completion path. Upstream error payloads are not shown to users.
+- The returned completion URL must use HTTPS on the exact configured AuthKit origin, without embedded credentials. The continuation path comes from the authenticated WorkOS API and is not restricted to documentation examples. Domain mismatch errors show only the received and expected origins; check that the API key and AuthKit domain belong to the same environment. Upstream error payloads are not shown to users.
 - In standalone mode, legacy setup links can manage the signed-in identity's repository; switching to a different identity requires the AI client's reconnect flow.
 - Automated tests simulate GitHub, WorkOS, and database responses. They do not prove the live dashboard configuration, provider permissions, token claims, or client behavior. Complete the live checks above before calling production activation finished.
 
