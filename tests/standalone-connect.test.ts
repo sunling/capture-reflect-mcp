@@ -59,11 +59,8 @@ describe("Standalone connection flow", () => {
     const url = new URL(authorized.headers.get("location")!);
     const token = url.searchParams.get("token")!;
     expect(await verifySetupToken(config, token)).toBe("user_existing");
-    const setupCookie = authorized.headers.get("set-cookie");
-    expect(setupCookie).not.toContain("github-secret");
-    expect(setupCookie).toContain(`capture_reflect_setup=${encodeURIComponent(token)}`);
-    expect(setupCookie).not.toContain("capture_reflect_login=");
-    const headers = { cookie: `${cookiePrefix}capture_reflect_setup=${token}; another=value` };
+    expect(authorized.headers.get("set-cookie")).toBeNull();
+    const headers = { cookie: `${cookiePrefix}another=value` };
     const page = await setup(new Request(url, { headers }));
     expect(page.status).toBe(200);
     expect(await page.text()).toContain("/auth/login?external_auth_id=ext_auth_test");
@@ -84,23 +81,14 @@ describe("Standalone connection flow", () => {
     expect(mocks.exchange).not.toHaveBeenCalled();
   });
 
-  it("rejects a copied setup link without the login browser cookie", async () => {
-    const { state } = await start();
-    const authorized = await callback(state);
-    const response = await setup(new Request(authorized.headers.get("location")!));
-    expect(response.status).toBe(400);
-    expect(mocks.complete).not.toHaveBeenCalled();
-  });
-
-  it.each(["unrelated=present", "unrelated=present; capture_reflect_setup=wrong"])("rejects saving with missing or mismatched setup cookies: %s", async (cookie) => {
+  it("rejects a tampered setup token before repository access or OAuth completion", async () => {
     const token = await createSetupToken(config, "user_existing", { externalAuthId: "ext_auth_test", externalUserId: "github:42", email: "verified@example.com", githubUserId: 42 });
+    const tampered = `${token.slice(0, -1)}${token.endsWith("a") ? "b" : "a"}`;
     const response = await setup(new Request("https://api.example.com/setup/repository", {
       method: "POST",
-      headers: { cookie },
-      body: new URLSearchParams({ token, github_user_id: "42", repository: JSON.stringify([1, "chosen-user/records", "main"]), timezone: "UTC" }),
+      body: new URLSearchParams({ token: tampered, github_user_id: "42", repository: JSON.stringify([1, "chosen-user/records", "main"]), timezone: "UTC" }),
     }));
     expect(response.status).toBe(400);
-    expect(await response.text()).toContain("Connection setup must continue in the browser where login started.");
     expect(mocks.initialize).not.toHaveBeenCalled();
     expect(mocks.select).not.toHaveBeenCalled();
     expect(mocks.complete).not.toHaveBeenCalled();
@@ -109,7 +97,7 @@ describe("Standalone connection flow", () => {
   it("does not complete OAuth after repository persistence fails", async () => {
     const token = await createSetupToken(config, "user_existing", { externalAuthId: "ext_auth_test", externalUserId: "github:42", email: "verified@example.com", githubUserId: 42 });
     mocks.select.mockRejectedValue(new Error("Storage unavailable"));
-    const response = await setup(new Request("https://api.example.com/setup/repository", { method: "POST", headers: { cookie: `capture_reflect_setup=${token}` }, body: new URLSearchParams({ token, github_user_id: "42", repository: JSON.stringify([1, "chosen-user/records", "main"]), timezone: "UTC" }) }));
+    const response = await setup(new Request("https://api.example.com/setup/repository", { method: "POST", body: new URLSearchParams({ token, github_user_id: "42", repository: JSON.stringify([1, "chosen-user/records", "main"]), timezone: "UTC" }) }));
     expect(response.status).toBe(400);
     expect(mocks.complete).not.toHaveBeenCalled();
   });

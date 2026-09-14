@@ -40,15 +40,14 @@ export default async (request: Request): Promise<Response> => {
       const destination = new URL("/setup", runtime.publicOrigin);
       destination.searchParams.set("token", setup);
       destination.searchParams.set("repositories", "1");
-      // Send only the setup cookie on this redirect. Some hosting adapters can
-      // collapse multiple Set-Cookie values and cause the browser to discard the
-      // setup cookie, which prevents the next /setup request from being bound to
-      // the browser that started login. The short-lived login cookie expires on
-      // its own and remains scoped to /auth.
-      response = new Response(null, { status: 302, headers: {
-        location: destination.toString(),
-        "set-cookie": `capture_reflect_setup=${encodeURIComponent(setup)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=900`,
-      } });
+      // GitHub OAuth state already binds authorization to the browser that
+      // started login. Continue with the short-lived signed setup token so the
+      // flow also works in clients that do not preserve cookies across OAuth
+      // windows.
+      response = new Response(null, {
+        status: 302,
+        headers: { location: destination.toString() },
+      });
     } else {
       response = new Response("Not found", { status: 404 });
     }

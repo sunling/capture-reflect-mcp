@@ -47,9 +47,6 @@ async function tokenAndUser(request: Request): Promise<{ token: string; userId: 
   const url = new URL(request.url);
   const token = url.searchParams.get("state") ?? url.searchParams.get("token") ?? cookieToken(request);
   if (!token) throw new Error("The setup link is missing or expired. Request a new setup link from your AI client.");
-  if (await setupCompletion(runtime, token) && cookieToken(request) !== token) {
-    throw new Error("Connection setup must continue in the browser where login started.");
-  }
   return { token, userId: await verifySetupToken(runtime, token) };
 }
 
@@ -120,7 +117,6 @@ async function saveRepository(request: Request): Promise<Response> {
   const token = String(form.get("token") ?? "");
   const userId = await verifySetupToken(runtime, token);
   const completion = await setupCompletion(runtime, token);
-  if (completion && cookieToken(request) !== token) throw new Error("Connection setup must continue in the browser where login started.");
   const selected = JSON.parse(String(form.get("repository") ?? "")) as unknown;
   if (!Array.isArray(selected) || selected.length !== 3) throw new Error("Invalid repository selection.");
   const [installationId, repositoryName, branch] = selected;
@@ -156,10 +152,10 @@ async function saveRepository(request: Request): Promise<Response> {
   });
   if (completion) {
     const destination = await completeConnect(runtime, completion);
-    return new Response(null, { status: 303, headers: {
-      location: destination,
-      "set-cookie": `${cookieName}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`,
-    } });
+    return new Response(null, {
+      status: 303,
+      headers: { location: destination },
+    });
   }
   return html("Connected", `
     <div class="success">✓</div>
