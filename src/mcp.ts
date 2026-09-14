@@ -1,7 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { downloadImageAttachments } from "./attachments.js";
-import { registerSkills } from "./skill-catalog.js";
+import { getBubbleBreakerContext } from "./bubble-breaker.js";
+import { loadSkillCatalog, registerSkills } from "./skill-catalog.js";
 import type { RecordsStore } from "./storage/records-store.js";
 
 const recordTypeSchema = z.enum(["journal", "note"]);
@@ -65,6 +66,34 @@ export function createServer(
   );
 
   registerSkills(server);
+
+  const bubbleBreaker = loadSkillCatalog().find((skill) => skill.frontmatter.name === "bubble-breaker")!;
+  server.registerTool(
+    "get_bubble_breaker_context",
+    {
+      title: "Get Bubble Breaker context",
+      description:
+        "Get recent journals and notes plus the Bubble Breaker workflow for one unfamiliar resource, diverse perspectives, blind spots, cross-domain connections, Socratic questions, or recording a reported completion. Defaults to the last seven calendar days in the configured time zone. This read-only tool does not browse or generate recommendations; the client must verify external resources with web tools. Do not save recommendations as completed. For an explicit completion, follow the returned minimal capture_note workflow without automatic enrichment.",
+      inputSchema: z.object({
+        from: z.string().optional().describe("Inclusive YYYY-MM-DD start; provide with to, or omit both"),
+        to: z.string().optional().describe("Inclusive YYYY-MM-DD end; provide with from, or omit both"),
+      }),
+      outputSchema: z.object({
+        currentDate: z.string(),
+        currentTimestamp: z.string(),
+        timeZone: z.string(),
+        from: z.string(),
+        to: z.string(),
+        records: z.array(storedRecordSchema),
+        instructions: z.string(),
+      }),
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+    },
+    async (range) => toolResult({
+      ...await getBubbleBreakerContext(store, range, timeZone),
+      instructions: bubbleBreaker.content,
+    }),
+  );
 
   if (setup) {
     server.registerTool(

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bubble Breaker"
+  short_description: "Explore unfamiliar resources and fresh perspectives"
+  default_prompt: "Use $bubble-breaker to find one unfamiliar resource worth exploring."

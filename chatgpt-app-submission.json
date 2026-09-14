@@ -67,6 +67,18 @@
         "open_world_justification": "Reads records from the configured repository without publishing or changing external state.",
         "destructive_justification": "Does not delete, overwrite, revoke access, or perform an irreversible action."
       }
+    },
+    "get_bubble_breaker_context": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads recent journals and notes and returns bundled Bubble Breaker instructions and current date/time.",
+        "open_world_justification": "Reads the configured repository without browsing the public web or changing external state.",
+        "destructive_justification": "Does not create, append, overwrite, or delete records."
+      }
     }
   },
   "test_cases": [
@@ -110,6 +122,14 @@
       "file_attachment_urls": null,
       "tools_triggered": "search_records",
       "expected_output": "Returns matching records and excerpts with dates or paths, or clearly states that no matching evidence was found.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Find one unfamiliar input using recent context.",
+      "user_prompt": "Use Bubble Breaker to find one unfamiliar resource outside my recent interests.",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_bubble_breaker_context",
+      "expected_output": "Returns recent records and instructions. The client verifies one resource with its web tools, or discloses unavailable browsing. No completion note is saved until the user reports finishing.",
       "expected_output_url": null
     }
   ],

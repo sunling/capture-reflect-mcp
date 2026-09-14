@@ -12,19 +12,21 @@ reviews/
 
 ## Current scope
 
-The local server exposes four record tools. The hosted service also exposes a secure setup tool:
+The local server exposes five record and context tools. The hosted service also exposes a secure setup tool:
 
 - `capture_journal`: create or append a personal journal entry fragment, with optional photos.
 - `capture_note`: save a Markdown note preserving the original text, with optional source, related journal entries, AI-labeled reflections, and photos.
 - `get_records_by_date_range`: retrieve journal entries and notes for review.
 - `search_records`: search record contents.
+- `get_bubble_breaker_context`: read recent journals and notes, current date/time, and the Bubble Breaker workflow; defaults to the last seven calendar days in the configured time zone.
 - `get_github_setup_link`: authorize a GitHub App and choose a per-user records repository.
 
-The MCP server handles access and storage. It publishes three focused Agent Skills through the MCP Skills extension so supported AI clients can discover their instructions and resources:
+The MCP server handles access and storage. It publishes four focused Agent Skills through the MCP Skills extension so supported AI clients can discover their instructions and resources:
 
 - `capture-record`: route one journal entry or note, preserve the user's voice, and pass uploaded photos through.
 - `review-records`: review a date range using evidence from the stored records.
 - `recall-records`: search before answering questions about earlier records.
+- `bubble-breaker`: discover one verified unfamiliar resource, record completion with minimal effort, or explore perspectives, blind spots, connections, and questions.
 
 ### Note capture workflow
 
@@ -33,6 +35,12 @@ The capture skill keeps the user's text verbatim in an **Original note** section
 Before saving, the client runs up to three focused `search_records` queries restricted to journals, reads the results, and includes up to three meaningful connections with dates, relative file links, and exact excerpts. Search currently matches literal text; it may miss related experiences expressed differently. Empty sections are omitted, and a failed lookup does not prevent saving the original note. Users can request another format or skip enrichment.
 
 This is a client workflow defined by the bundled skill and tool instructions. `capture_note` still accepts Markdown `content`; the storage layer does not automatically search, enforce sections, or rewrite existing notes.
+
+### Bubble Breaker workflow
+
+Ask “Find one unfamiliar resource for me” or “帮我突破信息茧房，推荐一个陌生输入”. The client uses `get_bubble_breaker_context` for recent history and instructions, then its own web tools to verify one concrete resource. The MCP does not browse or generate recommendations itself. Other modes are `challenge`, `blindspot`, `connect`, and `socratic`.
+
+Recommendations stay in chat. Once you explicitly report completion, the client checks notes for an existing completion and saves a minimal record through `capture_note`, with `input` and `bubble-breaker` tags and no automatic journal enrichment or required summary. The configured time zone replaces the reference skill's fixed time zone. Search-based duplicate checks are not atomic; existing notes cannot be appended, so an explicitly requested repeat completion can be saved separately. Scheduling requires a supported client.
 
 ## Terminology
 
@@ -265,4 +273,4 @@ npx @modelcontextprotocol/inspector node dist/src/server.js
 
 - Add MCP resources for reading individual records.
 - Complete domain verification, privacy policy, tool scanning, test prompts, and ChatGPT plugin review.
-- Add scheduled reflection and information-bubble-breaker workflows.
+- Add scheduled reflection and automated Bubble Breaker delivery.
