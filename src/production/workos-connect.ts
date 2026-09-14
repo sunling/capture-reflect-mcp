@@ -41,11 +41,13 @@ export async function resolveGitHubUser(
 
 export async function completeConnect(
   config: ProductionConfig,
-  input: { externalAuthId: string; externalUserId: string; email: string },
+  input: { externalAuthId: string; userId: string; email: string },
 ): Promise<string> {
   const result = await workos<{ redirect_uri: string }>(config, "/authkit/oauth2/complete", "POST", {
     external_auth_id: input.externalAuthId,
-    user: { id: input.externalUserId, email: input.email },
+    // Standalone Connect copies this application-owned ID into the issued
+    // access token's `sub`. Keep it identical to the connection storage key.
+    user: { id: input.userId, email: input.email },
   });
   let url: URL;
   try {
