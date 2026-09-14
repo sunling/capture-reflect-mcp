@@ -153,10 +153,18 @@ async function saveRepository(request: Request): Promise<Response> {
   });
   if (completion) {
     const destination = await completeConnect(runtime, completion);
-    return new Response(null, {
-      status: 303,
-      headers: { location: destination },
-    });
+    const scriptDestination = JSON.stringify(destination)
+      .replaceAll("<", "\\u003c")
+      .replaceAll("\u2028", "\\u2028")
+      .replaceAll("\u2029", "\\u2029");
+    return html("Returning to your AI client", `
+      <div class="success">✓</div>
+      <div class="eyebrow">Connection saved</div>
+      <h1>Finishing connection…</h1>
+      <p class="lede">You will be returned to your AI client automatically.</p>
+      <p><a class="button" href="${escapeHtml(destination)}">Continue</a></p>
+      <script>window.location.replace(${scriptDestination});</script>
+    `);
   }
   return html("Connected", `
     <div class="success">✓</div>
