@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { SignJWT, jwtVerify } from "jose";
 import type { ProductionConfig } from "./config.js";
 
-const SETUP_AUDIENCE = "log-reflect-github-setup";
+const SETUP_AUDIENCE = "capture-reflect-github-setup";
 
 function secretKey(config: ProductionConfig): Uint8Array {
   return new TextEncoder().encode(config.setupTokenSecret);

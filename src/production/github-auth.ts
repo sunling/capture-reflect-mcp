@@ -74,7 +74,7 @@ async function githubJson<T>(path: string, token: string): Promise<T> {
       accept: "application/vnd.github+json",
       authorization: `Bearer ${token}`,
       "x-github-api-version": "2022-11-28",
-      "user-agent": "log-reflect-mcp",
+      "user-agent": "capture-reflect-mcp",
     },
   });
   if (!response.ok) throw new Error(`GitHub API request failed (${response.status}).`);

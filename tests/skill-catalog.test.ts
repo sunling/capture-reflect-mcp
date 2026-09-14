@@ -7,7 +7,7 @@ describe("Skill catalog", () => {
     const skills = loadSkillCatalog();
 
     expect(skills.map(({ frontmatter }) => frontmatter.name)).toEqual([
-      "capture-records",
+      "capture-record",
       "review-records",
       "recall-records",
     ]);

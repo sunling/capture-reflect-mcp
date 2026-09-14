@@ -14,7 +14,7 @@ import { GitHubRecordsStore } from "../../src/storage/github-records.js";
 
 const runtime = loadProductionConfig();
 const connections = new ConnectionStore(runtime);
-const cookieName = "log_reflect_setup";
+const cookieName = "capture_reflect_setup";
 
 function html(title: string, body: string, status = 200): Response {
   return brandPage({
@@ -37,7 +37,7 @@ function cookieToken(request: Request): string | undefined {
 async function tokenAndUser(request: Request): Promise<{ token: string; userId: string }> {
   const url = new URL(request.url);
   const token = url.searchParams.get("state") ?? url.searchParams.get("token") ?? cookieToken(request);
-  if (!token) throw new Error("The setup link is missing or expired. Request a new link in ChatGPT.");
+  if (!token) throw new Error("The setup link is missing or expired. Request a new setup link from your AI client.");
   return { token, userId: await verifySetupToken(runtime, token) };
 }
 
@@ -65,7 +65,7 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
   return html("Connect your records", `
     <div class="eyebrow">✓ GitHub authorized</div>
     <h1>Choose where your records live</h1>
-    <p class="lede">Capture &amp; Reflect writes your journals and notes directly to a GitHub repository you control.</p>
+    <p class="lede">Capture &amp; Reflect writes your journal entries and notes directly to a GitHub repository you control.</p>
     <form method="post" action="/setup/repository">
       <input type="hidden" name="token" value="${escapeHtml(token)}">
       <div class="field">
@@ -77,7 +77,7 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
       <div class="field">
         <label>Time zone</label>
         <div class="timezone-display" id="timezone-display">UTC · detected automatically</div>
-        <p class="hint">Used to decide which date your journals and notes belong to.</p>
+        <p class="hint">Used to decide which date your journal entries and notes belong to.</p>
       </div>
       <button type="submit">Save &amp; connect</button>
       <div class="privacy-note"><span>●</span><div>Your writing and images go directly to the GitHub repository you choose. Capture &amp; Reflect stores only the encrypted connection details needed to access it.</div></div>
@@ -137,8 +137,8 @@ async function saveRepository(request: Request): Promise<Response> {
     <div class="eyebrow">Connection saved</div>
     <h1>You're all set</h1>
     <p class="lede">Your records will be stored in <span class="repo">${escapeHtml(repository.full_name)}</span>.</p>
-    <p class="hint">You can close this page and return to ChatGPT. Capture &amp; Reflect will use your selected repository and time zone from now on.</p>
-    <div class="privacy-note"><span>●</span><div>Your repository is ready with journals, notes, and reviews folders.</div></div>
+    <p class="hint">You can close this page and return to your conversation. Capture &amp; Reflect will use your selected repository and time zone from now on.</p>
+    <div class="privacy-note"><span>●</span><div>Your repository is ready with the <code>journals/</code>, <code>notes/</code>, and <code>reviews/</code> directories.</div></div>
   `);
 }
 

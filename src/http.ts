@@ -80,7 +80,7 @@ export async function main(): Promise<void> {
       if (url.pathname === "/health" && request.method === "GET") {
         sendJson(response, 200, {
           status: "ok",
-          server: "log-reflect-mcp",
+          server: "capture-reflect-mcp",
           transport: "streamable-http",
         });
         return;
@@ -112,7 +112,7 @@ export async function main(): Promise<void> {
 
   http.listen(config.port, config.host, () => {
     console.error(
-      `log-reflect-mcp listening on http://${config.host}:${config.port}/mcp`,
+      `capture-reflect-mcp listening on http://${config.host}:${config.port}/mcp`,
     );
   });
 }

@@ -42,8 +42,7 @@ export function noteDirectory(date: string): string {
 }
 
 export function journalFileName(input: CaptureJournalInput): string {
-  const compact = compactDate(input.date);
-  return `${compact}-${input.keyword}.md`;
+  return `${compactDate(input.date)}-${input.keyword}.md`;
 }
 
 export function buildJournalFragment(input: CaptureJournalInput): string {
