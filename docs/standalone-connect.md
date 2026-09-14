@@ -44,7 +44,7 @@ Do not reuse or manually edit OAuth callback URLs. Their codes, state values, an
 
 ## Failure behavior and verification limits
 
-- Login state and setup tokens have separate audiences, expire after 15 minutes, and are bound to their initiating browser cookies. Starting a second flow in the same browser replaces the first flow's cookie; restart if the state no longer matches.
+- Login state and setup tokens have separate audiences and expire after 15 minutes. GitHub OAuth state is bound to the initiating browser cookie. After that check succeeds, the signed setup token carries the verified identity and one-time WorkOS completion context across clients that do not preserve cookies between OAuth windows.
 - GitHub credentials are stored encrypted server-side, never inside login/setup cookies. Successful GitHub authorization clears the previous repository selection and requires a fresh selection.
 - WorkOS completion runs only after repository authorization checks, initialization, and selection succeed. A failure returns an error without claiming the AI client is connected. Restart from the AI client if WorkOS's temporary authorization context expired or was already consumed.
 - New WorkOS user creation can precede consent completion. A canceled flow may leave a user/authorization record, but does not move existing personal records.
