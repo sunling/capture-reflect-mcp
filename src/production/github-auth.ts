@@ -44,6 +44,7 @@ export function githubAuthorizeUrl(config: ProductionConfig, state: string): str
   url.searchParams.set("client_id", config.githubClientId);
   url.searchParams.set("redirect_uri", `${config.publicOrigin}/github/callback`);
   url.searchParams.set("state", state);
+  url.searchParams.set("prompt", "select_account");
   return url.toString();
 }
 

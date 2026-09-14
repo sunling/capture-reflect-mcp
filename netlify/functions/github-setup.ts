@@ -24,6 +24,10 @@ function html(title: string, body: string, status = 200): Response {
   });
 }
 
+function switchAccountLink(token: string): string {
+  return `<p><a href="/setup?token=${encodeURIComponent(token)}&amp;reauthorize=1">Use a different GitHub account</a></p>`;
+}
+
 function setupCookie(token: string): string {
   return `${cookieName}=${encodeURIComponent(token)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=900`;
 }
@@ -56,7 +60,7 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
     })),
   ))).flat();
   if (repositories.length === 0) {
-    return html("No repository selected", `<p>Edit the GitHub App installation and grant access to at least one repository, then request a new setup link.</p>`, 400);
+    return html("No repository selected", `<p>Edit the GitHub App installation and grant access to at least one repository, then request a new setup link.</p>${switchAccountLink(token)}`, 400);
   }
   const options = repositories.map((repository) => {
     const value = JSON.stringify([repository.installationId, repository.full_name, repository.default_branch]);
@@ -65,9 +69,12 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
   return html("Connect your records", `
     <div class="eyebrow">✓ GitHub authorized</div>
     <h1>Choose where your records live</h1>
+    <p>GitHub account: <strong>${escapeHtml(connection.githubLogin)}</strong></p>
+    ${switchAccountLink(token)}
     <p class="lede">Capture &amp; Reflect writes your journal entries and notes directly to a GitHub repository you control.</p>
     <form method="post" action="/setup/repository">
       <input type="hidden" name="token" value="${escapeHtml(token)}">
+      <input type="hidden" name="github_user_id" value="${connection.githubUserId}">
       <div class="field">
         <label for="repository">Records repository</label>
         <select id="repository" name="repository" required>${options}</select>
@@ -113,6 +120,9 @@ async function saveRepository(request: Request): Promise<Response> {
   new Intl.DateTimeFormat("en", { timeZone }).format();
   const connection = await connections.get(userId);
   if (!connection) throw new Error("GitHub authorization was not found.");
+  if (String(connection.githubUserId) !== form.get("github_user_id")) {
+    throw new Error("The GitHub account changed. Open a new setup link and choose a repository again.");
+  }
   const installations = await listInstallations(connection.accessToken);
   if (!installations.some(({ id }) => id === installationId)) throw new Error("GitHub installation is not authorized.");
   const repositories = await listInstallationRepositories(connection.accessToken, installationId);
@@ -127,6 +137,7 @@ async function saveRepository(request: Request): Promise<Response> {
   await records.initializeRepository();
   await connections.selectRepository({
     userId,
+    githubUserId: connection.githubUserId,
     installationId,
     repository: repository.full_name,
     branch: selectedBranch,
@@ -142,14 +153,26 @@ async function saveRepository(request: Request): Promise<Response> {
   `);
 }
 
-export default async (request: Request): Promise<Response> => {
+async function handleRequest(request: Request): Promise<Response> {
   try {
     const url = new URL(request.url);
     if (url.pathname === "/setup" && request.method === "GET") {
       const { token, userId } = await tokenAndUser(request);
+      if (url.searchParams.get("reauthorize") === "1") {
+        return new Response(null, { status: 302, headers: { location: githubAuthorizeUrl(runtime, token), "set-cookie": setupCookie(token) } });
+      }
       const connection = await connections.get(userId);
       if (connection) {
-        const response = await repositoryPage(userId, token);
+        // Show account switching without calling GitHub with a possibly expired token.
+        const response = url.searchParams.get("repositories") === "1"
+          ? await repositoryPage(userId, token)
+          : html("Your GitHub connection", `
+              <h1>Your GitHub connection</h1>
+              <p>Connected GitHub account: <strong>${escapeHtml(connection.githubLogin)}</strong></p>
+              ${connection.repository ? `<p>Records repository: <span class="repo">${escapeHtml(connection.repository)}</span></p>` : "<p>Choose a repository to finish connecting.</p>"}
+              <p><a href="/setup?token=${encodeURIComponent(token)}&amp;repositories=1">Choose a repository with this account</a></p>
+              ${switchAccountLink(token)}
+            `);
         const headers = new Headers(response.headers);
         headers.append("set-cookie", setupCookie(token));
         return new Response(response.body, { status: response.status, headers });
@@ -157,6 +180,10 @@ export default async (request: Request): Promise<Response> => {
       return new Response(null, { status: 302, headers: { location: githubAuthorizeUrl(runtime, token), "set-cookie": setupCookie(token) } });
     }
     if (url.pathname === "/github/callback" && request.method === "GET") {
+      const state = url.searchParams.get("state");
+      if (!state || state !== cookieToken(request)) {
+        throw new Error("GitHub authorization state did not match this browser. Open a new setup link and try again.");
+      }
       const { token, userId } = await tokenAndUser(request);
       const code = url.searchParams.get("code");
       if (!code) throw new Error("GitHub did not return an authorization code.");
@@ -168,20 +195,28 @@ export default async (request: Request): Promise<Response> => {
         githubLogin: identity.login,
         ...tokens,
       });
-      return repositoryPage(userId, token);
+      return await repositoryPage(userId, token);
     }
     if (url.pathname === "/github/installed" && request.method === "GET") {
       const { token, userId } = await tokenAndUser(request);
-      return repositoryPage(userId, token);
+      return await repositoryPage(userId, token);
     }
     if (url.pathname === "/setup/repository" && request.method === "POST") {
-      return saveRepository(request);
+      return await saveRepository(request);
     }
     return html("Not found", "<p>This setup page does not exist.</p>", 404);
   } catch (error) {
     console.error(error);
     return html("Setup could not be completed", `<p>${escapeHtml(error instanceof Error ? error.message : "Unexpected setup error")}</p>`, 400);
   }
+}
+
+export default async (request: Request): Promise<Response> => {
+  const response = await handleRequest(request);
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", "no-store");
+  headers.set("referrer-policy", "no-referrer");
+  return new Response(response.body, { status: response.status, headers });
 };
 
 export const config: Config = {

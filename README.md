@@ -78,6 +78,12 @@ https://api.bysunling.com/mcp
 
 A supported remote MCP client can connect to this endpoint and complete OAuth. On first use, Capture & Reflect provides a secure GitHub setup link so the user can authorize the GitHub App, choose the repository where records should live, and save the detected time zone.
 
+### Switch GitHub accounts
+
+Ask “Switch the GitHub account for my records” to get a fresh setup link. The setup page shows the connected GitHub username. Choose **Use a different GitHub account**, select or sign into the desired account on GitHub, and then choose a repository and click **Save & connect**. Grant the GitHub App access to that repository if needed.
+
+Disconnecting the plugin in ChatGPT does not clear the server's saved GitHub connection. Account switching uses GitHub's account picker and does not require clearing browser cookies. The old connection remains until authorization succeeds; successful reauthorization clears the previous repository selection, so a repository must be selected before captures resume. Existing records stay in their original repository.
+
 ### Claude
 
 In Claude:

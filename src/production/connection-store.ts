@@ -57,6 +57,10 @@ export class ConnectionStore {
         workos_user_id: input.workosUserId,
         github_user_id: input.githubUserId,
         github_login: input.githubLogin,
+        // New authorization must be followed by an explicit repository choice.
+        installation_id: null,
+        repository_full_name: null,
+        branch: "main",
         access_token_encrypted: encryptSecret(input.accessToken, this.#encryptionKey),
         refresh_token_encrypted: input.refreshToken
           ? encryptSecret(input.refreshToken, this.#encryptionKey)
@@ -72,12 +76,13 @@ export class ConnectionStore {
 
   async selectRepository(input: {
     userId: string;
+    githubUserId: number;
     installationId: number;
     repository: string;
     branch: string;
     timeZone: string;
   }): Promise<void> {
-    const { error } = await this.#db
+    const { data, error } = await this.#db
       .from("user_connections")
       .update({
         installation_id: input.installationId,
@@ -86,8 +91,12 @@ export class ConnectionStore {
         time_zone: input.timeZone,
         updated_at: new Date().toISOString(),
       })
-      .eq("workos_user_id", input.userId);
+      .eq("workos_user_id", input.userId)
+      .eq("github_user_id", input.githubUserId)
+      .select("workos_user_id")
+      .maybeSingle();
     if (error) throw new Error(`Unable to save repository selection: ${error.message}`);
+    if (!data) throw new Error("The GitHub account changed. Open a new setup link and choose a repository again.");
   }
 
   async updateTokens(userId: string, input: {
