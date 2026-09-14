@@ -23,6 +23,7 @@ function html(title: string, body: string, status = 200): Response {
     title,
     status,
     body: `<section class="setup-card">${body}</section>`,
+    formActionOrigins: [runtime.workosAuthkitDomain],
   });
 }
 

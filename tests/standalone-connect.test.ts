@@ -63,6 +63,7 @@ describe("Standalone connection flow", () => {
     const headers = { cookie: `${cookiePrefix}another=value` };
     const page = await setup(new Request(url, { headers }));
     expect(page.status).toBe(200);
+    expect(page.headers.get("content-security-policy")).toContain("form-action 'self' https://auth.example.com");
     expect(await page.text()).toContain("/auth/login?external_auth_id=ext_auth_test");
     expect(mocks.complete).not.toHaveBeenCalled();
     const saved = await setup(new Request("https://api.example.com/setup/repository", { method: "POST", headers, body: new URLSearchParams({ token, github_user_id: "42", timezone: "UTC", repository: JSON.stringify([1, "chosen-user/records", "main"]) }) }));

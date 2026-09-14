@@ -14,10 +14,21 @@ type BrandPageOptions = {
   layout?: "wide" | "reading";
   status?: number;
   cacheControl?: string;
+  formActionOrigins?: string[];
 };
 
 export function brandPage(options: BrandPageOptions): Response {
   const layout = options.layout ?? "reading";
+  const formActions = [
+    "'self'",
+    ...(options.formActionOrigins ?? []).map((value) => {
+      const url = new URL(value);
+      if (url.protocol !== "https:" || url.username || url.password) {
+        throw new Error("CSP form-action origins must use HTTPS without embedded credentials.");
+      }
+      return url.origin;
+    }),
+  ].join(" ");
   return new Response(`<!doctype html>
 <html lang="en">
 <head>
@@ -133,7 +144,7 @@ export function brandPage(options: BrandPageOptions): Response {
     headers: {
       "content-type": "text/html; charset=utf-8",
       "cache-control": options.cacheControl ?? "no-store",
-      "content-security-policy": "default-src 'none'; img-src https://avatars.githubusercontent.com; style-src 'unsafe-inline'; script-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+      "content-security-policy": `default-src 'none'; img-src https://avatars.githubusercontent.com; style-src 'unsafe-inline'; script-src 'unsafe-inline'; form-action ${formActions}; base-uri 'none'; frame-ancestors 'none'`,
       "referrer-policy": "no-referrer",
       "x-content-type-options": "nosniff",
     },
