@@ -60,7 +60,7 @@ describe("Standalone connection flow", () => {
     const token = url.searchParams.get("token")!;
     expect(await verifySetupToken(config, token)).toBe("user_existing");
     expect(authorized.headers.get("set-cookie")).toBeNull();
-    const headers = cookiePrefix ? { cookie: `${cookiePrefix}another=value` } : undefined;
+    const headers = { cookie: `${cookiePrefix}another=value` };
     const page = await setup(new Request(url, { headers }));
     expect(page.status).toBe(200);
     expect(await page.text()).toContain("/auth/login?external_auth_id=ext_auth_test");
