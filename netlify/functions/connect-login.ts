@@ -36,7 +36,7 @@ export default async (request: Request): Promise<Response> => {
       const email = await getVerifiedGitHubEmail(tokens.accessToken);
       const user = await resolveGitHubUser(runtime, connections, identity.id, email);
       await connections.saveAuthorization({ workosUserId: user.userId, githubUserId: identity.id, githubLogin: identity.login, ...tokens });
-      const setup = await createSetupToken(runtime, user.userId, { externalAuthId, externalUserId: user.externalUserId, email: user.email, githubUserId: identity.id });
+      const setup = await createSetupToken(runtime, user.userId, { externalAuthId, email: user.email, githubUserId: identity.id });
       const destination = new URL("/setup", runtime.publicOrigin);
       destination.searchParams.set("token", setup);
       destination.searchParams.set("repositories", "1");
