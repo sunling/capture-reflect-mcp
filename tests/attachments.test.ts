@@ -3,6 +3,19 @@ import { describe, expect, it } from "vitest";
 import { downloadImageAttachments } from "../src/attachments.js";
 
 describe("downloadImageAttachments", () => {
+  it("preserves localized descriptions and avoids a language-specific fallback", async () => {
+    const original = await sharp({ create: { width: 1, height: 1, channels: 3, background: "white" } }).png().toBuffer();
+    const files = [
+      { alt: "पेड़ की तस्वीर", file_name: "photo.png" },
+      { file_name: "บันทึก.png" },
+      {},
+    ].map((file, index) => ({ ...file, download_url: "https://files.example.test/photo", file_id: String(index) }));
+    const attachments = await downloadImageAttachments(files, async () =>
+      new Response(new Uint8Array(original), { headers: { "content-type": "image/png" } }),
+    );
+    expect(attachments.map(({ alt }) => alt)).toEqual(["पेड़ की तस्वीर", "บันทึก", ""]);
+  });
+
   it("downloads, resizes, and normalizes an uploaded photo", async () => {
     const original = await sharp({
       create: {

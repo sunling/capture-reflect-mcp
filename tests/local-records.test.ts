@@ -32,6 +32,7 @@ describe("LocalRecordsStore", () => {
     });
 
     expect(created.action).toBe("created");
+    expect(created.path).toBe("journals/2026/202608/20260824-咖啡店.md");
     expect(appended).toEqual({
       path: created.path,
       action: "appended",
@@ -40,6 +41,18 @@ describe("LocalRecordsStore", () => {
     const content = await fs.readFile(path.join(root, created.path), "utf8");
     expect(content).toContain("### 第一次记录");
     expect(content).toContain("### 后来想到");
+  });
+
+  it("appends to an existing journal with a legacy weekday filename", async () => {
+    const directory = path.join(root, "journals/2026/202608");
+    await fs.mkdir(directory, { recursive: true });
+    const legacyPath = "journals/2026/202608/20260831-周一-walk.md";
+    await fs.writeFile(path.join(root, legacyPath), "### Walk\n\nOriginal entry.\n");
+    const result = await store.captureJournal({ date: "2026-08-31", title: "Later", keyword: "हिन्दी", content: "Another thought." });
+    expect(result.path).toBe(legacyPath);
+    expect(result.action).toBe("appended");
+    expect(await fs.readdir(directory)).toEqual(["20260831-周一-walk.md"]);
+    expect(await fs.readFile(path.join(root, legacyPath), "utf8")).toContain("Another thought.");
   });
 
   it("stores an image beside a journal and inserts a relative Markdown link", async () => {

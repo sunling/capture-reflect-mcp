@@ -17,6 +17,7 @@ const fileParamSchema = z.object({
   file_id: z.string().min(1),
   mime_type: z.string().optional(),
   file_name: z.string().optional(),
+  alt: z.string().optional().describe("Image description in the user's language, based on supplied context or visible image content. Preserve a user-provided description; omit when unavailable."),
 });
 
 const storedRecordSchema = z.object({
@@ -59,7 +60,7 @@ export function createServer(
     { name: "capture-reflect", version: "0.6.0" },
     {
       instructions:
-        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not add conclusions the user did not express. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records. When the user asks to reconnect GitHub, reconfigure the connection, change the records repository, or update the time zone, call get_github_setup_link and give them its setupUrl; ChatGPT's own reconnect action does not replace this setup flow.",
+        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not attribute conclusions to the user that they did not express. For note capture, keep the original note verbatim and place any AI-generated connections or reflections in separate, explicitly labeled sections as described by capture_note and the capture-records skill. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records. When the user asks to reconnect GitHub, reconfigure the connection, change the records repository, or update the time zone, call get_github_setup_link and give them its setupUrl; ChatGPT's own reconnect action does not replace this setup flow.",
     },
   );
 
@@ -102,7 +103,7 @@ export function createServer(
           .string()
           .min(1)
           .max(40)
-          .describe("Short filename keyword in the user's language when practical; Unicode letters and numbers, underscores, and hyphens are supported"),
+          .describe("Short filename keyword in the user's language when practical; Unicode letters, combining marks, and numbers, underscores, and hyphens are supported"),
         content: z.string().min(1).describe("Markdown journal body in the user's original language, without translation, invented summaries, or tags"),
         attachments: z
           .array(fileParamSchema)
@@ -137,7 +138,7 @@ export function createServer(
     {
       title: "Save a note",
       description:
-        "Save a note in any language when the user asks to keep an article, book, podcast, video, course, conversation, quotation, link, something they learned, or an idea prompted by outside material. Preserve the source language and the user's response language, including code-switching; never translate unless explicitly requested. Keep the source and the user's own response distinguishable.",
+        "Save a note in any language when the user asks to keep an article, book, podcast, video, course, conversation, quotation, link, something they learned, or an idea prompted by outside material. Follow the capture-records skill: preserve the original note verbatim under Original note, with optional Source, Related journal entries, and Further reflection sections, using headings in the note's language. Before saving, unless the user asks to skip enrichment, use up to three focused search_records queries with types: ['journal']; read returned content and include at most three meaningful connections with dates, relative file links, exact excerpts, and explanations labeled Possible connection (AI). Label further AI reflections explicitly and never attribute them to the user. Omit empty optional sections. If lookup fails, still save the original and disclose the lookup failure. Respect an explicitly requested format. This tool stores the supplied Markdown; it does not search or structure it automatically.",
       inputSchema: z.object({
         date: z
           .string()
@@ -150,11 +151,11 @@ export function createServer(
           .string()
           .min(1)
           .max(40)
-          .describe("Short filename keyword in the user's language when practical; Unicode letters and numbers, underscores, and hyphens are supported"),
+          .describe("Short filename keyword in the user's language when practical; Unicode letters, combining marks, and numbers, underscores, and hyphens are supported"),
         content: z
           .string()
           .min(1)
-          .describe("Markdown note body preserving the source and user's original languages"),
+          .describe("Markdown body with a required Original note section containing the user's original text verbatim; optional Source, Related journal entries (verified journal links and excerpts, with AI-labeled possible connections), and Further reflection (AI-labeled) sections. Use headings in the note's language and omit empty optional sections. Honor an explicitly requested format; keep rewrites separate from the original."),
         tags: z.array(z.string().min(1)).max(3).optional(),
         source: z.string().min(1).optional().describe("Source title or URL when available"),
         attachments: z

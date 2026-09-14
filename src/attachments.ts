@@ -11,6 +11,7 @@ export interface FileParam {
   file_id: string;
   mime_type?: string | undefined;
   file_name?: string | undefined;
+  alt?: string | undefined;
 }
 
 async function readLimited(response: Response): Promise<Buffer> {
@@ -36,9 +37,10 @@ async function readLimited(response: Response): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-function altText(fileName?: string): string {
+function altText(fileName?: string, description?: string): string {
+  if (description?.trim()) return description.trim();
   const withoutExtension = fileName?.replace(/\.[^.]+$/, "").trim();
-  return withoutExtension ? withoutExtension.slice(0, 80) : "图片";
+  return withoutExtension ? Array.from(withoutExtension).slice(0, 80).join("") : "";
 }
 
 async function normalizeImage(data: Buffer): Promise<{
@@ -108,7 +110,7 @@ export async function downloadImageAttachments(
         data: normalized.data,
         extension: normalized.extension,
         mimeType: normalized.mimeType,
-        alt: altText(file.file_name),
+        alt: altText(file.file_name, file.alt),
       };
     }),
   );

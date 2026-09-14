@@ -2,8 +2,7 @@ import path from "node:path";
 import type { CaptureJournalInput, CaptureNoteInput } from "./records-store.js";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const SAFE_KEYWORD_PATTERN = /^[\p{L}\p{N}_-]{1,40}$/u;
-const WEEKDAYS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"] as const;
+const SAFE_KEYWORD_PATTERN = /^[\p{L}\p{M}\p{N}_-]{1,40}$/u;
 
 export function assertDate(date: string): void {
   if (!DATE_PATTERN.test(date)) {
@@ -18,7 +17,7 @@ export function assertDate(date: string): void {
 export function assertKeyword(keyword: string): void {
   if (!SAFE_KEYWORD_PATTERN.test(keyword)) {
     throw new Error(
-      "keyword must be 1-40 letters, numbers, underscores, or hyphens, with no spaces or slashes.",
+      "keyword must be 1-40 letters, combining marks, numbers, underscores, or hyphens, with no spaces or slashes.",
     );
   }
 }
@@ -44,8 +43,7 @@ export function noteDirectory(date: string): string {
 
 export function journalFileName(input: CaptureJournalInput): string {
   const compact = compactDate(input.date);
-  const weekday = WEEKDAYS[new Date(`${input.date}T00:00:00Z`).getUTCDay()];
-  return `${compact}-${weekday}-${input.keyword}.md`;
+  return `${compact}-${input.keyword}.md`;
 }
 
 export function buildJournalFragment(input: CaptureJournalInput): string {

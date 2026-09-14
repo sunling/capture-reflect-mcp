@@ -15,7 +15,7 @@ reviews/
 The local server exposes four record tools. The hosted service also exposes a secure setup tool:
 
 - `capture_journal`: create or append a personal journal fragment, with optional photos.
-- `capture_note`: save a Markdown note, with optional photos.
+- `capture_note`: save a Markdown note preserving the original text, with optional source, related journal entries, AI-labeled reflections, and photos.
 - `get_records_by_date_range`: retrieve journal entries and notes for review.
 - `search_records`: search record contents.
 - `get_github_setup_link`: authorize a GitHub App and choose a per-user records repository.
@@ -26,9 +26,19 @@ The MCP server handles access and storage. It publishes three focused Agent Skil
 - `review-records`: review a date range using evidence from the stored records.
 - `recall-records`: search before answering questions about earlier records.
 
+### Note capture workflow
+
+The capture skill keeps the user's text verbatim in an **Original note** section. **Source**, **Related journal entries**, and **Further reflection** are optional, with headings in the note's language. Any AI-generated connections or reflections are labeled separately from the original text.
+
+Before saving, the client runs up to three focused `search_records` queries restricted to journals, reads the results, and includes up to three meaningful connections with dates, relative file links, and exact excerpts. Search currently matches literal text; it may miss related experiences expressed differently. Empty sections are omitted, and a failed lookup does not prevent saving the original note. Users can request another format or skip enrichment.
+
+This is a client workflow defined by the bundled skill and tool instructions. `capture_note` still accepts Markdown `content`; the storage layer does not automatically search, enforce sections, or rewrite existing notes.
+
 ## Language support
 
 The plugin interface, tool names, and public metadata are English-first. Record content is multilingual: titles, Markdown bodies, source text, quotations, and filename keywords may use Unicode and keep the user's original language and code-switching. Capture tools do not translate unless the user explicitly asks. Recall and review responses follow the language of the current request while preserving source-language quotations.
+
+New journal filenames use `{YYYYMMDD}-{keyword}.md`, without a language-specific weekday. Existing journals retain their filenames and are still appended to by date. Filename keywords support Unicode letters, combining marks, and numbers. Image attachments accept an optional `alt` description in the user’s language, falling back to the filename stem or an empty description.
 
 Examples include “记录一下今天发生的事”, “Save this reflection”, “今日のメモを保存して”, and mixed-language notes.
 

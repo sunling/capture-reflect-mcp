@@ -35,7 +35,7 @@
 ### 2. Capture a note from an external source
 **Prompt:** Save a note: I heard the phrase “gig economy” in a podcast today and want to remember to learn what it means.
 
-**Expected behavior:** Use `capture_note`, preserve the user's wording, and keep the external source/idea distinguishable from the user's response.
+**Expected behavior:** Follow the capture skill: preserve the note text verbatim under Original note, search journals with up to three focused `search_records` queries, then use `capture_note`. Include only meaningful, verified related entries with dates, relative links, exact excerpts, and AI-labeled possible connections. Source and AI-labeled Further reflection sections are optional. Omit empty sections; if search fails, save the original and report the lookup failure.
 
 **Expected result:** A Markdown note is created under `notes/{YYYY}/{YYYYMM}/` and the response reports the path.
 
