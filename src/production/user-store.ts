@@ -4,6 +4,18 @@ import type { ProductionConfig } from "./config.js";
 import { ConnectionStore, type UserConnection } from "./connection-store.js";
 import { refreshGitHubTokens } from "./github-auth.js";
 
+export async function connectionUserIdForSubject(
+  connections: Pick<ConnectionStore, "userIdsForGitHub">,
+  subject: string,
+): Promise<string> {
+  const match = /^github:(\d+)$/.exec(subject);
+  if (!match) return subject;
+  const githubUserId = Number(match[1]);
+  if (!Number.isSafeInteger(githubUserId)) return subject;
+  const userIds = await connections.userIdsForGitHub(githubUserId);
+  return userIds.length === 1 ? userIds[0]! : subject;
+}
+
 export async function recordsStoreForUser(
   config: ProductionConfig,
   connections: ConnectionStore,
