@@ -5,14 +5,17 @@ import { authenticateRequest } from "../../src/production/auth.js";
 import { loadProductionConfig } from "../../src/production/config.js";
 import { ConnectionStore } from "../../src/production/connection-store.js";
 import { createSetupUrl } from "../../src/production/setup-token.js";
-import { lazyRecordsStore, recordsStoreForUser } from "../../src/production/user-store.js";
+import { connectionUserIdForSubject, lazyRecordsStore, recordsStoreForUser } from "../../src/production/user-store.js";
 
 const runtime = loadProductionConfig();
 const connections = new ConnectionStore(runtime);
 
 const mcp = createMcpHandler(async ({ authInfo }) => {
-  const userId = authInfo?.extra?.userId;
-  if (typeof userId !== "string") throw new Error("Authenticated user is missing.");
+  const subject = authInfo?.extra?.userId;
+  if (typeof subject !== "string") throw new Error("Authenticated user is missing.");
+  // Tokens issued before the subject/storage-key fix used github:<id>. Resolve
+  // those signed legacy subjects so already-connected clients keep working.
+  const userId = await connectionUserIdForSubject(connections, subject);
   const connection = await connections.get(userId);
   const store = lazyRecordsStore(async () => (await recordsStoreForUser(runtime, connections, userId)).store);
   return createServer(store, connection?.timeZone, {

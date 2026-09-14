@@ -73,7 +73,7 @@ describe("Standalone connection flow", () => {
     expect(savedPage).toContain("Finishing connection");
     expect(savedPage).toContain("window.location.replace(\"https://auth.example.com/oauth/authorize/complete?state=workos-state\")");
     expect(savedPage).toContain("href=\"https://auth.example.com/oauth/authorize/complete?state=workos-state\"");
-    expect(mocks.complete).toHaveBeenCalledWith(config, { externalAuthId: "ext_auth_test", externalUserId: "github:42", email: "verified@example.com", githubUserId: 42 });
+    expect(mocks.complete).toHaveBeenCalledWith(config, { externalAuthId: "ext_auth_test", userId: "user_existing", email: "verified@example.com", githubUserId: 42 });
     expect(mocks.select.mock.invocationCallOrder[0]).toBeLessThan(mocks.complete.mock.invocationCallOrder[0]!);
   });
 
@@ -87,7 +87,7 @@ describe("Standalone connection flow", () => {
   });
 
   it("rejects a tampered setup token before repository access or OAuth completion", async () => {
-    const token = await createSetupToken(config, "user_existing", { externalAuthId: "ext_auth_test", externalUserId: "github:42", email: "verified@example.com", githubUserId: 42 });
+    const token = await createSetupToken(config, "user_existing", { externalAuthId: "ext_auth_test", email: "verified@example.com", githubUserId: 42 });
     const tampered = `${token.slice(0, -1)}${token.endsWith("a") ? "b" : "a"}`;
     const response = await setup(new Request("https://api.example.com/setup/repository", {
       method: "POST",
@@ -100,7 +100,7 @@ describe("Standalone connection flow", () => {
   });
 
   it("does not complete OAuth after repository persistence fails", async () => {
-    const token = await createSetupToken(config, "user_existing", { externalAuthId: "ext_auth_test", externalUserId: "github:42", email: "verified@example.com", githubUserId: 42 });
+    const token = await createSetupToken(config, "user_existing", { externalAuthId: "ext_auth_test", email: "verified@example.com", githubUserId: 42 });
     mocks.select.mockRejectedValue(new Error("Storage unavailable"));
     const response = await setup(new Request("https://api.example.com/setup/repository", { method: "POST", body: new URLSearchParams({ token, github_user_id: "42", repository: JSON.stringify([1, "chosen-user/records", "main"]), timezone: "UTC" }) }));
     expect(response.status).toBe(400);
