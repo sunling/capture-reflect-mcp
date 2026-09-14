@@ -1,3 +1,4 @@
+import { prepareReview } from "./reviews.js";
 import {
   assertDate,
   assertKeyword,
@@ -11,6 +12,7 @@ import {
   recordDateFromPath,
 } from "./record-utils.js";
 import type {
+  SaveReviewInput,
   CaptureJournalInput,
   CaptureNoteInput,
   CaptureResult,
@@ -126,6 +128,13 @@ export class GitHubRecordsStore implements RecordsStore {
       }
     }
     return { created };
+  }
+
+  async saveReview(input: SaveReviewInput): Promise<{ path: string; action: "created" }> {
+    const review = await prepareReview(this, input);
+    // No SHA: GitHub refuses to replace a file, including concurrent creates.
+    await this.#putFile(review.path, review.content, `capture-reflect: save review for ${input.from} to ${input.to}`);
+    return { path: review.path, action: "created" };
   }
 
   async captureJournal(
@@ -287,7 +296,7 @@ export class GitHubRecordsStore implements RecordsStore {
     const requested = new Set(options.types ?? ["journal", "note"]);
     const paths = (await this.#listRecordPaths()).filter((filePath) => {
       const date = recordDateFromPath(filePath);
-      const type = filePath.startsWith("journals/") ? "journal" : "note";
+      const type = filePath.startsWith("journals/") ? "journal" : filePath.startsWith("reviews/") ? "review" : "note";
       return Boolean(
         date && date >= options.from && date <= options.to && requested.has(type),
       );
@@ -298,7 +307,7 @@ export class GitHubRecordsStore implements RecordsStore {
       return {
         path: filePath,
         date: recordDateFromPath(filePath)!,
-        type: filePath.startsWith("journals/") ? "journal" : "note",
+        type: filePath.startsWith("journals/") ? "journal" : filePath.startsWith("reviews/") ? "review" : "note",
         content: file.content,
       };
     });
@@ -377,7 +386,7 @@ export class GitHubRecordsStore implements RecordsStore {
       .filter(
         (filePath) =>
           filePath.endsWith(".md") &&
-          (filePath.startsWith("journals/") || filePath.startsWith("notes/")),
+          (filePath.startsWith("journals/") || filePath.startsWith("notes/") || filePath.startsWith("reviews/")),
       );
   }
 

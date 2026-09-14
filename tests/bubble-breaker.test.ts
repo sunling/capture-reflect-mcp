@@ -4,7 +4,7 @@ import type { RecordsStore } from "../src/storage/records-store.js";
 
 function mockStore() {
   return {
-    captureJournal: vi.fn(), captureNote: vi.fn(), searchRecords: vi.fn(),
+    saveReview: vi.fn(), captureJournal: vi.fn(), captureNote: vi.fn(), searchRecords: vi.fn(),
     getRecords: vi.fn().mockResolvedValue([]),
   } satisfies RecordsStore;
 }
@@ -84,6 +84,23 @@ describe("Bubble Breaker MCP integration", () => {
       const invalid = await request("tools/call", { name: "get_bubble_breaker_context", arguments: { from: "2026-09-01" } });
       expect(invalid.isError).toBe(true);
       expect(store.getRecords).toHaveBeenCalledTimes(1);
+      expect(listing.tools.find((tool: any) => tool.name === "save_review").annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false });
+      const review = { from: "2026-09-01", to: "2026-09-07", title: "Review", keyword: "weekly", content: "AI interpretation: limited evidence.", sourcePaths: ["notes/2026/202609/20260901-note.md"] };
+      store.saveReview.mockResolvedValue({ path: "reviews/2026/202609/20260914-weekly.md", action: "created" });
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-09-13T23:30:00Z"));
+      try {
+        const saved = await request("tools/call", { name: "save_review", arguments: review });
+        expect(saved.isError).not.toBe(true);
+        expect(store.saveReview).toHaveBeenCalledWith({ ...review, date: "2026-09-14" });
+      } finally {
+        vi.useRealTimers();
+      }
+      const missingSources = await request("tools/call", { name: "save_review", arguments: { ...review, sourcePaths: [] } });
+      expect(missingSources.isError).toBe(true);
+      expect(store.saveReview).toHaveBeenCalledTimes(1);
+      await request("tools/call", { name: "get_records_by_date_range", arguments: { from: "2026-09-01", to: "2026-09-30", types: ["review"] } });
+      expect(store.getRecords).toHaveBeenLastCalledWith({ from: "2026-09-01", to: "2026-09-30", types: ["review"] });
     } finally {
       await server.close();
       await client.close();

@@ -5,7 +5,7 @@ import { getBubbleBreakerContext } from "./bubble-breaker.js";
 import { loadSkillCatalog, registerSkills } from "./skill-catalog.js";
 import type { RecordsStore } from "./storage/records-store.js";
 
-const recordTypeSchema = z.enum(["journal", "note"]);
+const recordTypeSchema = z.enum(["journal", "note", "review"]);
 
 const captureResultSchema = z.object({
   path: z.string(),
@@ -61,7 +61,7 @@ export function createServer(
     { name: "capture-reflect", version: "0.6.0" },
     {
       instructions:
-        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not attribute conclusions to the user that they did not express. For note capture, keep the original note verbatim and place any AI-generated connections or reflections in separate, explicitly labeled sections as described by capture_note and the capture-record skill. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records. When the user asks to reconnect GitHub, reconfigure the connection, change the records repository, or update the time zone, call get_github_setup_link and give them its setupUrl; the AI client's own reconnect action does not replace this setup flow.",
+        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not attribute conclusions to the user that they did not express. For note capture, keep the original note verbatim and place any AI-generated connections or reflections in separate, explicitly labeled sections as described by capture_note and the capture-record skill. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records. Follow review-records and finish a requested review with save_review unless the user asks for chat-only output. Read earlier reviews only as interpretations to check against original records, not as independent evidence. When the user asks to reconnect GitHub, reconfigure the connection, change the records repository, or update the time zone, call get_github_setup_link and give them its setupUrl; the AI client's own reconnect action does not replace this setup flow.",
     },
   );
 
@@ -222,15 +222,35 @@ export function createServer(
   );
 
   server.registerTool(
+    "save_review",
+    {
+      title: "Save a review",
+      description: "Save a completed review under reviews/ as the final step of the review-records workflow, unless the user asks not to save. Include source-grounded patterns, questions, unfinished threads, and clearly separated user thoughts and AI interpretations. Source paths must refer to journals or notes in the reviewed range; the server validates them and adds linked references. Creates a new file and never overwrites. Do not substitute capture_note or capture_journal.",
+      inputSchema: z.object({
+        date: z.string().optional().describe("Save date YYYY-MM-DD; omit for today in the configured time zone. This is separate from the reviewed range."),
+        from: z.string().describe("Inclusive start of the reviewed period, YYYY-MM-DD"),
+        to: z.string().describe("Inclusive end of the reviewed period, YYYY-MM-DD"),
+        title: z.string().trim().min(1),
+        keyword: z.string().min(1).max(40).describe("Filename keyword; use a meaningful range or topic, with Unicode letters, numbers, underscores or hyphens"),
+        content: z.string().trim().min(1).describe("Markdown review in the user's language. Label AI interpretations and keep actual user thoughts distinct. Cite source entries for observations. Do not fabricate patterns or thoughts."),
+        sourcePaths: z.array(z.string().min(1)).min(1).describe("Repository-relative paths of all journal entries and notes actually reviewed; not earlier review files. Stored as metadata and relative Markdown links."),
+      }),
+      outputSchema: z.object({ path: z.string(), action: z.literal("created") }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+    },
+    async ({ date, ...input }) => toolResult(await store.saveReview({ ...input, date: date ?? currentDate(timeZone) })),
+  );
+
+  server.registerTool(
     "get_records_by_date_range",
     {
       title: "Read records by date range",
       description:
-        "Read journal entries and notes in any language within an inclusive date range. Use this before weekly or monthly reviews and whenever the user asks what they recorded during a period. Preserve source-language quotations; explain or summarize in the language of the user's request.",
+        "Read journal entries and notes in any language within an inclusive date range, or saved reviews with types: ['review']. Review dates are save dates; the reviewed period is recorded as from/to in each review. Use this before weekly or monthly reviews and whenever the user asks what they recorded during a period. Preserve source-language quotations; explain or summarize in the language of the user's request.",
       inputSchema: z.object({
         from: z.string().describe("Inclusive start date in YYYY-MM-DD"),
         to: z.string().describe("Inclusive end date in YYYY-MM-DD"),
-        types: z.array(recordTypeSchema).optional(),
+        types: z.array(recordTypeSchema).optional().describe("Defaults to journals and notes. Include review explicitly to retrieve saved interpretations; date filters use the save date, not the reviewed period."),
       }),
       outputSchema: z.object({ records: z.array(storedRecordSchema) }),
       annotations: {
@@ -250,12 +270,12 @@ export function createServer(
     {
       title: "Search personal records",
       description:
-        "Search journal entries and notes for words or phrases in any language. Use the user's original search terms when possible. Use this when the user asks whether, when, or how they previously mentioned a person, topic, feeling, event, or idea.",
+        "Search journal entries and notes for words or phrases in any language. Set types: ['review'] to search saved reviews separately; date filters use save dates. Reviews contain interpretations, not independent evidence. Use the user's original search terms when possible. Use this when the user asks whether, when, or how they previously mentioned a person, topic, feeling, event, or idea.",
       inputSchema: z.object({
         query: z.string().min(1),
         from: z.string().optional().describe("Optional start date in YYYY-MM-DD"),
         to: z.string().optional().describe("Optional end date in YYYY-MM-DD"),
-        types: z.array(recordTypeSchema).optional(),
+        types: z.array(recordTypeSchema).optional().describe("Defaults to journals and notes. Include review explicitly to retrieve saved interpretations; date filters use the save date, not the reviewed period."),
         limit: z.number().int().min(1).max(100).optional(),
       }),
       outputSchema: z.object({ records: z.array(searchRecordSchema) }),

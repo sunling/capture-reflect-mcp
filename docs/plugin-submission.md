@@ -62,7 +62,7 @@
 ### 5. Review the past seven days
 **Prompt:** Review my records from the past seven days. Where has my attention been going?
 
-**Expected behavior:** Use the `review-records` Skill, resolve the inclusive seven-day range, call `get_records_by_date_range`, and identify only patterns supported by the records.
+**Expected behavior:** Use the `review-records` Skill, resolve the inclusive seven-day range, call `get_records_by_date_range`, identify only patterns supported by the records, and finish with `save_review` and the saved path unless chat-only output is requested.
 
 **Expected result:** A concise reflection grounded in retrieved records. No repository write occurs.
 
@@ -73,9 +73,9 @@
 ### 1. Do not save a review as a journal or note
 **Prompt:** Save the weekly review you just gave me.
 
-**Expected behavior:** Explain that review persistence is not supported in this version.
+**Expected behavior:** Use `save_review` with the reviewed date range, actual journal/note source paths, and the review body. Never substitute journal or note capture.
 
-**Why:** There is no dedicated review write tool. The plugin must not substitute `capture_journal` or `capture_note`.
+**Why:** Reviews belong in `reviews/`, and `save_review` validates their sources and refuses overwrites.
 
 ### 2. Do not invent prior records
 **Prompt:** Tell me what I wrote last month about moving apartments.
@@ -95,6 +95,6 @@
 
 Initial public submission of Capture & Reflect.
 
-Capture & Reflect connects ChatGPT to a GitHub repository selected by the user. It supports capturing journal entries, notes, and uploaded photos; searching and recalling prior records; and reviewing records across a date range. Records remain in the user's repository. The first release intentionally keeps review persistence read-only: reviews can be generated in chat but are not written back to the repository.
+Capture & Reflect connects ChatGPT to a GitHub repository selected by the user. It supports capturing journal entries, notes, and uploaded photos; searching and recalling prior records; and reviewing records across a date range. Records remain in the user's repository. Reviews are saved under `reviews/` with source links and clearly labeled interpretations. Users can request chat-only reviews. Earlier reviews are retrieved explicitly and checked against original evidence.
 
 The hosted MCP endpoint is `https://api.bysunling.com/mcp`. GitHub repository selection and time zone setup are handled through the secure setup flow at `api.bysunling.com`. The setup page automatically detects the browser time zone.

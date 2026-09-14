@@ -51,7 +51,7 @@
         "destructiveHint": false
       },
       "justifications": {
-        "read_only_justification": "Only retrieves journal entries and notes within the requested inclusive date range.",
+        "read_only_justification": "Only retrieves journal entries and notes within the requested inclusive date range. Includes saved reviews only when explicitly requested with the review type.",
         "open_world_justification": "Reads records from the configured repository without publishing or changing external state.",
         "destructive_justification": "Does not delete, overwrite, revoke access, or perform an irreversible action."
       }
@@ -63,7 +63,7 @@
         "destructiveHint": false
       },
       "justifications": {
-        "read_only_justification": "Only searches journal and note contents and returns matching records and excerpts.",
+        "read_only_justification": "Only searches journal and note contents and returns matching records and excerpts. Includes saved reviews only when explicitly requested with the review type.",
         "open_world_justification": "Reads records from the configured repository without publishing or changing external state.",
         "destructive_justification": "Does not delete, overwrite, revoke access, or perform an irreversible action."
       }
@@ -78,6 +78,18 @@
         "read_only_justification": "Reads recent journals and notes and returns bundled Bubble Breaker instructions and current date/time.",
         "open_world_justification": "Reads the configured repository without browsing the public web or changing external state.",
         "destructive_justification": "Does not create, append, overwrite, or delete records."
+      }
+    },
+    "save_review": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Creates a Markdown review with validated journal/note source references.",
+        "open_world_justification": "Can commit the review to the user-selected GitHub repository.",
+        "destructive_justification": "Creates only; never overwrites an existing review or modifies source entries."
       }
     }
   },
@@ -146,8 +158,8 @@
       "description": "Do not use capture tools to persist a generated review.",
       "user_prompt": "Save the weekly review you just gave me in the reviews folder.",
       "file_attachment_urls": null,
-      "tools_triggered": null,
-      "expected_output": "The app should explain that saving reviews is not supported instead of substituting a journal or note capture tool.",
+      "tools_triggered": "save_review",
+      "expected_output": "Saves the review through save_review with actual reviewed source paths, never through capture_journal or capture_note.",
       "expected_output_url": null
     },
     {

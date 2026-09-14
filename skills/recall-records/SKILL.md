@@ -12,3 +12,5 @@ If results are insufficient, refine the query or date range instead of guessing.
 Search using the user's original words and script when possible. Respond in the language of the current request, while keeping quotations in their original language. Translate only when explicitly requested and label translations clearly.
 
 Searching is read-only. Do not save a new record unless the user separately asks to record something.
+
+When recalling earlier reviews, set `types: ["review"]` explicitly. Date filters refer to the save date, not the reviewed period (stored in `from`/`to` metadata). Treat saved review claims as interpretations and consult original entries before treating them as evidence about the user.

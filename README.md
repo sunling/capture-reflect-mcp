@@ -12,19 +12,20 @@ reviews/
 
 ## Current scope
 
-The local server exposes five record and context tools. The hosted service also exposes a secure setup tool:
+The local server exposes six record and context tools. The hosted service also exposes a secure setup tool:
 
 - `capture_journal`: create or append a personal journal entry fragment, with optional photos.
 - `capture_note`: save a Markdown note preserving the original text, with optional source, related journal entries, AI-labeled reflections, and photos.
-- `get_records_by_date_range`: retrieve journal entries and notes for review.
-- `search_records`: search record contents.
+- `get_records_by_date_range`: retrieve journals and notes, or saved reviews with `types: ["review"]` (filtered by save date).
+- `save_review`: save a review and validated source links under `reviews/`, without overwriting.
+- `search_records`: search journals and notes by default; use `types: ["review"]` for earlier reviews.
 - `get_bubble_breaker_context`: read recent journals and notes, current date/time, and the Bubble Breaker workflow; defaults to the last seven calendar days in the configured time zone.
 - `get_github_setup_link`: authorize a GitHub App and choose a per-user records repository.
 
 The MCP server handles access and storage. It publishes four focused Agent Skills through the MCP Skills extension so supported AI clients can discover their instructions and resources:
 
 - `capture-record`: route one journal entry or note, preserve the user's voice, and pass uploaded photos through.
-- `review-records`: review a date range using evidence from the stored records.
+- `review-records`: review a date range and save its sources, patterns, questions, and reflections unless chat-only output is requested.
 - `recall-records`: search before answering questions about earlier records.
 - `bubble-breaker`: discover one verified unfamiliar resource, record completion with minimal effort, or explore perspectives, blind spots, connections, and questions.
 
@@ -60,8 +61,8 @@ Examples include “记录一下今天发生的事”, “Save this reflection�
 ## Safety boundaries
 
 - The source repository contains no personal records or credentials.
-- The server can only read `journals/` and `notes/`.
-- New records are written only inside those two directories.
+- The server can only read `journals/`, `notes/`, and `reviews/`. Reviews must be requested explicitly and are excluded from default reads and searches.
+- New records are written only inside those three directories. Reviews are create-only; source paths must identify existing journals or notes within the reviewed period.
 - Existing note files are never silently overwritten.
 - If more than one journal file exists for a date, the write stops instead of guessing.
 - Each capture accepts up to five image attachments. Images are resized to fit within 2048 × 2048 pixels, metadata is removed, and the processed file must be no larger than 10 MB.
@@ -132,8 +133,8 @@ RECORDS_TIME_ZONE=America/Los_Angeles
 
 Each capture creates a GitHub commit immediately. Journal
 fragments for the same day are appended to the existing file with conflict retries; an existing
-note is never overwritten. Reading and search remain limited to `journals/` and
-`notes/`.
+note is never overwritten. Reading and search remain limited to `journals/`, `notes/`, and explicitly requested
+`reviews/`.
 
 The GitHub token used by this MCP server is separate from any GitHub connector authorization in
 an AI client. Never commit `.env`; it is already excluded by `.gitignore`.
@@ -206,7 +207,7 @@ Git does not track empty directories, so these marker files make the structure v
 
 The MCP server is passive: it exposes record and review capabilities but does not wake itself up on a schedule. The simplest hosted workflow is a scheduled task in a supported AI client that periodically invokes the `review-records` Skill, reads the chosen date range with `get_records_by_date_range`, and returns the review.
 
-At present, scheduled reviews are read-only and are not written back to the records repository. Persisting them under `reviews/` requires a separate, narrowly scoped `save_review` MCP tool. A self-hosted alternative is a Netlify Scheduled Function plus an AI model call, but that adds model credentials, scheduling, retries, and delivery handling to this service.
+The review skill finishes by calling `save_review` unless the user requests chat-only output. Reviews are saved as `reviews/YYYY/YYYYMM/YYYYMMDD-keyword.md`, with the save date, reviewed range, source paths and links, and the full review body. Source links reference current entries rather than immutable snapshots. User thoughts remain distinct from AI interpretations. Empty periods are not saved; sparse evidence is labeled. Existing reviews are never overwritten. Retrieve earlier reviews with `types: ["review"]`; date filters use the save date, while the reviewed period is stored in `from`/`to` metadata. A self-hosted alternative is a Netlify Scheduled Function plus an AI model call, but that adds model credentials, scheduling, retries, and delivery handling to this service.
 
 Never expose `SUPABASE_SECRET_KEY`, `GITHUB_CLIENT_SECRET`, `TOKEN_ENCRYPTION_KEY`, or `SETUP_TOKEN_SECRET` to a browser. Generate the latter two independently with a cryptographically secure random generator.
 

@@ -21,7 +21,11 @@ describe("production credential protection", () => {
     const encrypted = encryptSecret("github-token", config.tokenEncryptionKey);
     expect(encrypted).not.toContain("github-token");
     expect(decryptSecret(encrypted, config.tokenEncryptionKey)).toBe("github-token");
-    expect(() => decryptSecret(`${encrypted.slice(0, -1)}x`, config.tokenEncryptionKey)).toThrow();
+    const parts = encrypted.split(".");
+    const ciphertext = Buffer.from(parts[3]!, "base64url");
+    ciphertext[0] = ciphertext[0]! ^ 1;
+    parts[3] = ciphertext.toString("base64url");
+    expect(() => decryptSecret(parts.join("."), config.tokenEncryptionKey)).toThrow();
   });
 
   it("issues setup tokens for only the intended resource and user", async () => {

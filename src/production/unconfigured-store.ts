@@ -1,4 +1,5 @@
 import type {
+  SaveReviewInput,
   CaptureJournalInput,
   CaptureNoteInput,
   RecordsStore,
@@ -10,6 +11,7 @@ function notConnected(): never {
 }
 
 export class UnconfiguredRecordsStore implements RecordsStore {
+  saveReview(_input: SaveReviewInput): Promise<never> { return Promise.reject(notConnected()); }
   captureJournal(_input: CaptureJournalInput): Promise<never> { return Promise.reject(notConnected()); }
   captureNote(_input: CaptureNoteInput): Promise<never> { return Promise.reject(notConnected()); }
   getRecords(_options: { from: string; to: string; types?: RecordType[] }): Promise<never> {

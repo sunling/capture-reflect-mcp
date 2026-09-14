@@ -1,3 +1,4 @@
+import { prepareReview } from "./reviews.js";
 import { promises as fs } from "node:fs";
 import type { Dirent } from "node:fs";
 import path from "node:path";
@@ -13,6 +14,7 @@ import {
   recordDateFromPath,
 } from "./record-utils.js";
 import type {
+  SaveReviewInput,
   CaptureJournalInput,
   CaptureNoteInput,
   CaptureResult,
@@ -47,6 +49,14 @@ export class LocalRecordsStore implements RecordsStore {
 
   constructor(root: string) {
     this.#root = path.resolve(root);
+  }
+
+  async saveReview(input: SaveReviewInput): Promise<{ path: string; action: "created" }> {
+    const review = await prepareReview(this, input);
+    const filePath = path.join(this.#root, review.path);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, review.content, { encoding: "utf8", flag: "wx" });
+    return { path: review.path, action: "created" };
   }
 
   async captureJournal(
@@ -190,6 +200,9 @@ export class LocalRecordsStore implements RecordsStore {
         : []),
       ...(requested.has("note")
         ? [{ type: "note" as const, path: path.join(this.#root, "notes") }]
+        : []),
+      ...(requested.has("review")
+        ? [{ type: "review" as const, path: path.join(this.#root, "reviews") }]
         : []),
     ];
 
