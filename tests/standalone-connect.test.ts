@@ -59,7 +59,10 @@ describe("Standalone connection flow", () => {
     const url = new URL(authorized.headers.get("location")!);
     const token = url.searchParams.get("token")!;
     expect(await verifySetupToken(config, token)).toBe("user_existing");
-    expect(authorized.headers.get("set-cookie")).not.toContain("github-secret");
+    const setupCookie = authorized.headers.get("set-cookie");
+    expect(setupCookie).not.toContain("github-secret");
+    expect(setupCookie).toContain(`capture_reflect_setup=${encodeURIComponent(token)}`);
+    expect(setupCookie).not.toContain("capture_reflect_login=");
     const headers = { cookie: `${cookiePrefix}capture_reflect_setup=${token}; another=value` };
     const page = await setup(new Request(url, { headers }));
     expect(page.status).toBe(200);
