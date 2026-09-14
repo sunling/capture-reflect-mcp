@@ -67,8 +67,12 @@ describe("Standalone connection flow", () => {
     expect(await page.text()).toContain("/auth/login?external_auth_id=ext_auth_test");
     expect(mocks.complete).not.toHaveBeenCalled();
     const saved = await setup(new Request("https://api.example.com/setup/repository", { method: "POST", headers, body: new URLSearchParams({ token, github_user_id: "42", timezone: "UTC", repository: JSON.stringify([1, "chosen-user/records", "main"]) }) }));
-    expect(saved.status).toBe(303);
-    expect(saved.headers.get("location")).toBe("https://auth.example.com/oauth/authorize/complete?state=workos-state");
+    expect(saved.status).toBe(200);
+    expect(saved.headers.get("location")).toBeNull();
+    const savedPage = await saved.text();
+    expect(savedPage).toContain("Finishing connection");
+    expect(savedPage).toContain("window.location.replace(\"https://auth.example.com/oauth/authorize/complete?state=workos-state\")");
+    expect(savedPage).toContain("href=\"https://auth.example.com/oauth/authorize/complete?state=workos-state\"");
     expect(mocks.complete).toHaveBeenCalledWith(config, { externalAuthId: "ext_auth_test", externalUserId: "github:42", email: "verified@example.com", githubUserId: 42 });
     expect(mocks.select.mock.invocationCallOrder[0]).toBeLessThan(mocks.complete.mock.invocationCallOrder[0]!);
   });
