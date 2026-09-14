@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   exchange: vi.fn(), identity: vi.fn(), installations: vi.fn(), repositories: vi.fn(),
   verify: vi.fn(), initialize: vi.fn(),
 }));
-vi.mock("../src/production/config.js", () => ({ loadProductionConfig: () => ({ publicOrigin: "https://api.example.com", githubClientId: "client-id", githubAppSlug: "capture-reflect" }) }));
+vi.mock("../src/production/config.js", () => ({ loadProductionConfig: () => ({ publicOrigin: "https://api.example.com", workosAuthkitDomain: "https://auth.example.com", githubClientId: "client-id", githubAppSlug: "capture-reflect" }) }));
 vi.mock("../src/production/connection-store.js", () => ({ ConnectionStore: class {
   get = mocks.get; saveAuthorization = mocks.saveAuthorization; selectRepository = mocks.selectRepository;
 } }));
