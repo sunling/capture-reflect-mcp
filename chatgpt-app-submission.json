@@ -91,6 +91,18 @@
         "open_world_justification": "Can commit the review to the user-selected GitHub repository.",
         "destructive_justification": "Creates only; never overwrites an existing review or modifies source entries."
       }
+    },
+    "get_github_account_switch_link": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Returns a short-lived account-switch link; does not change the saved connection.",
+        "open_world_justification": "No authorization is performed until the user opens the link and acts on GitHub.",
+        "destructive_justification": "Does not clear credentials, modify records, or revoke access."
+      }
     }
   },
   "test_cases": [
@@ -142,6 +154,14 @@
       "file_attachment_urls": null,
       "tools_triggered": "get_bubble_breaker_context",
       "expected_output": "Returns recent records and instructions. The client verifies one resource with its web tools, or discloses unavailable browsing. No completion note is saved until the user reports finishing.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Switch GitHub accounts without reinstalling the plugin.",
+      "user_prompt": "Reconnecting keeps using my old GitHub account. Switch to another account.",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_github_account_switch_link",
+      "expected_output": "Returns a fresh setup URL with reauthorize=1 and the current GitHub username. Setup tools remain available if GitHub token refresh fails. The client directs the user to open the returned link and select an account and repository.",
       "expected_output_url": null
     }
   ],

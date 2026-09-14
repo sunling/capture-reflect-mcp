@@ -12,7 +12,7 @@ reviews/
 
 ## Current scope
 
-The local server exposes six record and context tools. The hosted service also exposes a secure setup tool:
+The local server exposes six record and context tools. The hosted service also exposes secure setup and account-switch tools:
 
 - `capture_journal`: create or append a personal journal entry fragment, with optional photos.
 - `capture_note`: save a Markdown note preserving the original text, with optional source, related journal entries, AI-labeled reflections, and photos.
@@ -21,6 +21,7 @@ The local server exposes six record and context tools. The hosted service also e
 - `search_records`: search journals and notes by default; use `types: ["review"]` for earlier reviews.
 - `get_bubble_breaker_context`: read recent journals and notes, current date/time, and the Bubble Breaker workflow; defaults to the last seven calendar days in the configured time zone.
 - `get_github_setup_link`: authorize a GitHub App and choose a per-user records repository.
+- `get_github_account_switch_link`: open GitHub account selection directly, including when the old authorization has expired.
 
 The MCP server handles access and storage. It publishes four focused Agent Skills through the MCP Skills extension so supported AI clients can discover their instructions and resources:
 
@@ -80,7 +81,7 @@ A supported remote MCP client can connect to this endpoint and complete OAuth. O
 
 ### Switch GitHub accounts
 
-Ask “Switch the GitHub account for my records” to get a fresh setup link. The setup page shows the connected GitHub username. Choose **Use a different GitHub account**, select or sign into the desired account on GitHub, and then choose a repository and click **Save & connect**. Grant the GitHub App access to that repository if needed.
+Ask “Switch the GitHub account for my records”. The client calls `get_github_account_switch_link` and returns a fresh link that opens GitHub’s account picker directly. Select or sign into the desired account, then choose a repository and click **Save & connect**. The general `get_github_setup_link` page also shows the current username and **Use a different GitHub account**. Grant the GitHub App access to that repository if needed.
 
 Disconnecting the plugin in ChatGPT does not clear the server's saved GitHub connection. Account switching uses GitHub's account picker and does not require clearing browser cookies. The old connection remains until authorization succeeds; successful reauthorization clears the previous repository selection, so a repository must be selected before captures resume. Existing records stay in their original repository.
 

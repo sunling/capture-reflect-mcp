@@ -49,7 +49,7 @@ function toolResult<T extends Record<string, unknown>>(value: T) {
 }
 
 export interface SetupLinkProvider {
-  status(): Promise<{ connected: boolean; repository?: string; setupUrl: string }>;
+  status(): Promise<{ connected: boolean; githubLogin?: string; repository?: string; setupUrl: string }>;
 }
 
 export function createServer(
@@ -61,7 +61,7 @@ export function createServer(
     { name: "capture-reflect", version: "0.6.0" },
     {
       instructions:
-        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not attribute conclusions to the user that they did not express. For note capture, keep the original note verbatim and place any AI-generated connections or reflections in separate, explicitly labeled sections as described by capture_note and the capture-record skill. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records. Follow review-records and finish a requested review with save_review unless the user asks for chat-only output. Read earlier reviews only as interpretations to check against original records, not as independent evidence. When the user asks to reconnect GitHub, reconfigure the connection, change the GitHub account or records repository, or update the time zone, call get_github_setup_link and give them its setupUrl; the AI client's own reconnect action does not replace this setup flow.",
+        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not attribute conclusions to the user that they did not express. For note capture, keep the original note verbatim and place any AI-generated connections or reflections in separate, explicitly labeled sections as described by capture_note and the capture-record skill. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records. Follow review-records and finish a requested review with save_review unless the user asks for chat-only output. Read earlier reviews only as interpretations to check against original records, not as independent evidence. When the user asks to switch GitHub accounts, call get_github_account_switch_link. For initial setup, repository changes, or time-zone updates, call get_github_setup_link and give them its setupUrl; the AI client's own reconnect action does not replace this setup flow.",
     },
   );
 
@@ -105,12 +105,34 @@ export function createServer(
         inputSchema: z.object({}),
         outputSchema: z.object({
           connected: z.boolean(),
+          githubLogin: z.string().optional(),
           repository: z.string().optional(),
           setupUrl: z.string().url(),
         }),
         annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
       },
       async () => toolResult(await setup.status()),
+    );
+    server.registerTool(
+      "get_github_account_switch_link",
+      {
+        title: "Switch GitHub account",
+        description: "Get a secure link that opens GitHub's account picker to change the account holding your records. Use when the user wants a different GitHub account or reconnect keeps using the old account. Give the returned setupUrl to the user. Opening it starts authorization; this tool alone changes nothing. After authorizing, the user must select a repository. Do not instruct the user to reinstall the plugin or use the ChatGPT OAuth callback URL.",
+        inputSchema: z.object({}),
+        outputSchema: z.object({
+          connected: z.boolean(),
+          githubLogin: z.string().optional(),
+          repository: z.string().optional(),
+          setupUrl: z.string().url(),
+        }),
+        annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+      },
+      async () => {
+        const status = await setup.status();
+        const url = new URL(status.setupUrl);
+        url.searchParams.set("reauthorize", "1");
+        return toolResult({ ...status, setupUrl: url.toString() });
+      },
     );
   }
 

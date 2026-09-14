@@ -33,3 +33,16 @@ export async function recordsStoreForUser(
     }),
   };
 }
+
+// Resolve GitHub credentials only for record operations, never for setup/tool discovery.
+export function lazyRecordsStore(load: () => Promise<RecordsStore>): RecordsStore {
+  let pending: Promise<RecordsStore> | undefined;
+  const get = () => pending ??= load();
+  return {
+    captureJournal: async (input) => (await get()).captureJournal(input),
+    captureNote: async (input) => (await get()).captureNote(input),
+    saveReview: async (input) => (await get()).saveReview(input),
+    getRecords: async (input) => (await get()).getRecords(input),
+    searchRecords: async (input) => (await get()).searchRecords(input),
+  };
+}
