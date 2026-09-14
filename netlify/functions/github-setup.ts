@@ -37,8 +37,10 @@ function setupCookie(token: string): string {
 
 function cookieToken(request: Request): string | undefined {
   const cookies = request.headers.get("cookie") ?? "";
-  const match = cookies.match(new RegExp(`(?:^|;\\s*)${cookieName}=([^;]+)`));
-  return match ? decodeURIComponent(match[1]!) : undefined;
+  const value = cookies.split(";").map((cookie) => cookie.trim())
+    .find((cookie) => cookie.startsWith(`${cookieName}=`))
+    ?.slice(cookieName.length + 1);
+  return value ? decodeURIComponent(value) : undefined;
 }
 
 async function tokenAndUser(request: Request): Promise<{ token: string; userId: string }> {

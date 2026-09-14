@@ -44,7 +44,7 @@ async function callback(state: string, cookieState = state) {
 }
 
 describe("Standalone connection flow", () => {
-  it("selects GitHub and a repository before returning control to WorkOS", async () => {
+  it.each(["", "unrelated=present; ", "first=one; second=two; "])("selects GitHub and a repository with cookie prefix %j before returning control to WorkOS", async (cookiePrefix) => {
     const { response, location, state } = await start();
     expect(response.status).toBe(302);
     expect(location.searchParams.get("prompt")).toBe("select_account");
@@ -60,7 +60,7 @@ describe("Standalone connection flow", () => {
     const token = url.searchParams.get("token")!;
     expect(await verifySetupToken(config, token)).toBe("user_existing");
     expect(authorized.headers.get("set-cookie")).not.toContain("github-secret");
-    const headers = { cookie: `capture_reflect_setup=${token}` };
+    const headers = { cookie: `${cookiePrefix}capture_reflect_setup=${token}; another=value` };
     const page = await setup(new Request(url, { headers }));
     expect(page.status).toBe(200);
     expect(await page.text()).toContain("/auth/login?external_auth_id=ext_auth_test");
@@ -86,6 +86,20 @@ describe("Standalone connection flow", () => {
     const authorized = await callback(state);
     const response = await setup(new Request(authorized.headers.get("location")!));
     expect(response.status).toBe(400);
+    expect(mocks.complete).not.toHaveBeenCalled();
+  });
+
+  it.each(["unrelated=present", "unrelated=present; capture_reflect_setup=wrong"])("rejects saving with missing or mismatched setup cookies: %s", async (cookie) => {
+    const token = await createSetupToken(config, "user_existing", { externalAuthId: "ext_auth_test", externalUserId: "github:42", email: "verified@example.com", githubUserId: 42 });
+    const response = await setup(new Request("https://api.example.com/setup/repository", {
+      method: "POST",
+      headers: { cookie },
+      body: new URLSearchParams({ token, github_user_id: "42", repository: JSON.stringify([1, "chosen-user/records", "main"]), timezone: "UTC" }),
+    }));
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("Connection setup must continue in the browser where login started.");
+    expect(mocks.initialize).not.toHaveBeenCalled();
+    expect(mocks.select).not.toHaveBeenCalled();
     expect(mocks.complete).not.toHaveBeenCalled();
   });
 
