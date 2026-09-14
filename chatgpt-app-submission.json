@@ -1,0 +1,142 @@
+{
+  "$schema": "https://developers.openai.com/apps-sdk/schemas/chatgpt-app-submission.v1.json",
+  "schema_version": 1,
+  "app_info": {
+    "display_name": "Capture & Reflect",
+    "subtitle": "Capture and revisit records",
+    "description": "Capture & Reflect saves multilingual journals, notes, and uploaded photos in a user-selected records repository, then searches and retrieves those records for grounded recall and reflection.",
+    "category": "PRODUCTIVITY"
+  },
+  "tools": {
+    "get_github_setup_link": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Reads the current GitHub connection status and creates a short-lived setup URL without changing the saved connection.",
+        "open_world_justification": "Returns a private setup URL and does not publish content or change an external system.",
+        "destructive_justification": "Does not delete, overwrite, revoke access, or perform an irreversible action."
+      }
+    },
+    "capture_journal": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Creates a journal file or appends a fragment and optional processed images to the user's records repository.",
+        "open_world_justification": "Can commit journal content and images to a user-selected GitHub repository, which may be externally visible.",
+        "destructive_justification": "Creates a new journal or appends a fragment without deleting or replacing existing journal content."
+      }
+    },
+    "capture_note": {
+      "annotations": {
+        "readOnlyHint": false,
+        "openWorldHint": true,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Creates a Markdown note and optional processed images in the user's records repository.",
+        "open_world_justification": "Can commit note content and images to a user-selected GitHub repository, which may be externally visible.",
+        "destructive_justification": "Creates a new note and refuses to overwrite an existing note at the same path."
+      }
+    },
+    "get_records_by_date_range": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only retrieves journal entries and notes within the requested inclusive date range.",
+        "open_world_justification": "Reads records from the configured repository without publishing or changing external state.",
+        "destructive_justification": "Does not delete, overwrite, revoke access, or perform an irreversible action."
+      }
+    },
+    "search_records": {
+      "annotations": {
+        "readOnlyHint": true,
+        "openWorldHint": false,
+        "destructiveHint": false
+      },
+      "justifications": {
+        "read_only_justification": "Only searches journal and note contents and returns matching records and excerpts.",
+        "open_world_justification": "Reads records from the configured repository without publishing or changing external state.",
+        "destructive_justification": "Does not delete, overwrite, revoke access, or perform an irreversible action."
+      }
+    }
+  },
+  "test_cases": [
+    {
+      "description": "Get the secure connection link for initial GitHub setup.",
+      "user_prompt": "Help me connect the GitHub repository where I keep my records.",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_github_setup_link",
+      "expected_output": "Returns the current connection status and a secure setup URL for choosing an authorized records repository.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Capture a multilingual journal entry with an uploaded photo.",
+      "user_prompt": "把这张照片放进今天的日记，并记录：散步以后，我终于能专心了。",
+      "file_attachment_urls": [
+        "https://example.com/reviewer-fixtures/walk.jpg"
+      ],
+      "tools_triggered": "capture_journal",
+      "expected_output": "Creates or appends today's journal in the configured time zone, stores the processed image, preserves the original language, and reports the saved paths.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Save a note inspired by an external source.",
+      "user_prompt": "Save a note that I heard the phrase 'gig economy' in a podcast and want to learn what it means.",
+      "file_attachment_urls": null,
+      "tools_triggered": "capture_note",
+      "expected_output": "Creates a new Markdown note that keeps the source context distinct from the user's response and reports the saved path.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Retrieve a bounded period for a grounded reflection.",
+      "user_prompt": "Review my journal entries and notes from August 25 through August 31, 2026. What patterns are supported by the records?",
+      "file_attachment_urls": null,
+      "tools_triggered": "get_records_by_date_range",
+      "expected_output": "Returns records from the inclusive date range so the response can identify only evidence-backed patterns.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Recall prior records using the user's search terms.",
+      "user_prompt": "What did I previously record about focus?",
+      "file_attachment_urls": null,
+      "tools_triggered": "search_records",
+      "expected_output": "Returns matching records and excerpts with dates or paths, or clearly states that no matching evidence was found.",
+      "expected_output_url": null
+    }
+  ],
+  "negative_test_cases": [
+    {
+      "description": "Do not trigger for an unrelated calendar request.",
+      "user_prompt": "What meetings do I have tomorrow?",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because it does not access calendars or meetings.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not use capture tools to persist a generated review.",
+      "user_prompt": "Save the weekly review you just gave me in the reviews folder.",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should explain that saving reviews is not supported instead of substituting a journal or note capture tool.",
+      "expected_output_url": null
+    },
+    {
+      "description": "Do not trigger for general journaling advice without a save request.",
+      "user_prompt": "What are some useful ways to start a daily journaling habit?",
+      "file_attachment_urls": null,
+      "tools_triggered": null,
+      "expected_output": "The app should not be invoked because the user is asking for general advice rather than reading or writing personal records.",
+      "expected_output_url": null
+    }
+  ]
+}
