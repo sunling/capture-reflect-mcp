@@ -1,0 +1,532 @@
+import { createHash } from "node:crypto";
+import {
+  assertDate,
+  assertKeyword,
+  attachmentMarkdown,
+  buildJournalFragment,
+  buildNoteDocument,
+  compactDate,
+  journalDirectory,
+  journalFileName,
+  noteDirectory,
+} from "./record-utils.js";
+import { prepareReview } from "./reviews.js";
+import type {
+  CaptureJournalInput,
+  CaptureNoteInput,
+  CaptureResult,
+  RecordAttachment,
+  RecordsStore,
+  SaveReviewInput,
+} from "./records-store.js";
+
+interface AtomicIndexedWriteOptions {
+  repository: string;
+  token: string;
+  branch?: string;
+  apiBaseUrl?: string;
+  fetch?: typeof globalThis.fetch;
+}
+
+interface GitHubCommitLookup {
+  sha: string;
+  commit: { tree: { sha: string } };
+}
+
+interface GitHubTree {
+  truncated: boolean;
+  tree: Array<{ path?: string; type?: string; sha?: string }>;
+}
+
+interface GitHubBlob {
+  content: string;
+  encoding: string;
+  sha: string;
+}
+
+interface GitHubGraphQlEnvelope<T> {
+  data?: T;
+  errors?: Array<{ message?: string }>;
+  message?: string;
+}
+
+interface GitHubRecordPath {
+  path: string;
+  sha: string;
+}
+
+interface SearchIndexEntry {
+  sha: string;
+  bloom: string;
+}
+
+interface SearchIndex {
+  version: 1;
+  bloomBytes: number;
+  hashCount: number;
+  records: Record<string, SearchIndexEntry>;
+}
+
+interface WriteSnapshot {
+  headSha: string;
+  records: GitHubRecordPath[];
+  paths: Set<string>;
+  indexSha?: string;
+}
+
+interface CommitAddition {
+  path: string;
+  contents: string;
+}
+
+const SEARCH_INDEX_PATH = ".capture-reflect/search-index-v1.json";
+const SEARCH_INDEX_VERSION = 1 as const;
+const BLOOM_BYTES = 512;
+const BLOOM_BITS = BLOOM_BYTES * 8;
+const BLOOM_HASH_COUNT = 4;
+const TRIGRAM_SIZE = 3;
+const WRITE_RETRIES = 3;
+
+class GitHubCommitConflictError extends Error {}
+
+function repositoryParts(repository: string): { nameWithOwner: string; encoded: string } {
+  const parts = repository.trim().split("/");
+  if (parts.length !== 2 || parts.some((part) => !part)) {
+    throw new Error("GitHub repository must use the owner/name format.");
+  }
+  return {
+    nameWithOwner: `${parts[0]!}/${parts[1]!}`,
+    encoded: parts.map(encodeURIComponent).join("/"),
+  };
+}
+
+// These functions intentionally match search-index-v1 in github-search.ts.
+function trigrams(value: string): string[] {
+  const characters = Array.from(value.toLocaleLowerCase());
+  if (characters.length < TRIGRAM_SIZE) return [];
+  const grams = new Set<string>();
+  for (let index = 0; index <= characters.length - TRIGRAM_SIZE; index += 1) {
+    grams.add(characters.slice(index, index + TRIGRAM_SIZE).join(""));
+  }
+  return [...grams];
+}
+
+function hash32(value: string, seed: number): number {
+  let hash = (0x811c9dc5 ^ seed) >>> 0;
+  for (const byte of Buffer.from(value, "utf8")) {
+    hash ^= byte;
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  hash ^= hash >>> 16;
+  hash = Math.imul(hash, 0x85ebca6b) >>> 0;
+  hash ^= hash >>> 13;
+  hash = Math.imul(hash, 0xc2b2ae35) >>> 0;
+  return (hash ^ (hash >>> 16)) >>> 0;
+}
+
+function bloomPositions(value: string): number[] {
+  const first = hash32(value, 0x9e3779b9);
+  const second = (hash32(value, 0x7f4a7c15) | 1) >>> 0;
+  return Array.from({ length: BLOOM_HASH_COUNT }, (_, index) =>
+    ((first + Math.imul(index, second)) >>> 0) % BLOOM_BITS,
+  );
+}
+
+function buildBloom(content: string): string {
+  const bytes = Buffer.alloc(BLOOM_BYTES);
+  for (const gram of trigrams(content)) {
+    for (const position of bloomPositions(gram)) {
+      const byteIndex = Math.floor(position / 8);
+      bytes[byteIndex] = bytes[byteIndex]! | (1 << (position % 8));
+    }
+  }
+  return bytes.toString("base64");
+}
+
+function validSearchIndex(value: unknown): value is SearchIndex {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<SearchIndex>;
+  if (
+    candidate.version !== SEARCH_INDEX_VERSION ||
+    candidate.bloomBytes !== BLOOM_BYTES ||
+    candidate.hashCount !== BLOOM_HASH_COUNT ||
+    !candidate.records ||
+    typeof candidate.records !== "object"
+  ) {
+    return false;
+  }
+  return Object.values(candidate.records).every(
+    (entry) =>
+      Boolean(entry) &&
+      typeof entry.sha === "string" &&
+      typeof entry.bloom === "string" &&
+      Buffer.from(entry.bloom, "base64").length === BLOOM_BYTES,
+  );
+}
+
+function indexIsCurrent(index: SearchIndex, records: GitHubRecordPath[]): boolean {
+  return (
+    Object.keys(index.records).length === records.length &&
+    records.every((record) => index.records[record.path]?.sha === record.sha)
+  );
+}
+
+function gitBlobSha(content: string): string {
+  const bytes = Buffer.from(content, "utf8");
+  const header = Buffer.from(`blob ${bytes.length}\0`, "utf8");
+  return createHash("sha1").update(header).update(bytes).digest("hex");
+}
+
+class AtomicIndexedWriter {
+  readonly #store: RecordsStore;
+  readonly #repository: string;
+  readonly #repositoryPath: string;
+  readonly #token: string;
+  readonly #branch: string;
+  readonly #apiBaseUrl: string;
+  readonly #fetch: typeof globalThis.fetch;
+
+  constructor(store: RecordsStore, options: AtomicIndexedWriteOptions) {
+    const repository = repositoryParts(options.repository);
+    if (!options.token.trim()) throw new Error("GitHub token must not be empty.");
+    this.#store = store;
+    this.#repository = repository.nameWithOwner;
+    this.#repositoryPath = repository.encoded;
+    this.#token = options.token.trim();
+    this.#branch = options.branch?.trim() || "main";
+    this.#apiBaseUrl = `${(options.apiBaseUrl ?? "https://api.github.com").replace(/\/$/, "")}/`;
+    this.#fetch = options.fetch ?? globalThis.fetch;
+  }
+
+  async captureNote(
+    note: CaptureNoteInput,
+  ): Promise<CaptureResult & { action: "created" }> {
+    assertDate(note.date);
+    assertKeyword(note.keyword);
+    const filePath = `${noteDirectory(note.date)}/${compactDate(note.date)}-${note.keyword}.md`;
+
+    for (let attempt = 0; attempt < WRITE_RETRIES; attempt += 1) {
+      const snapshot = await this.#writeSnapshot();
+      if (snapshot.paths.has(filePath)) throw new Error(`A note already exists at ${filePath}.`);
+
+      const attachments = this.#prepareAttachments(
+        snapshot.paths,
+        "note",
+        note.date,
+        note.keyword,
+        note.attachments ?? [],
+      );
+      const imageMarkdown = attachmentMarkdown(attachments.stored);
+      const content = buildNoteDocument({
+        ...note,
+        content: imageMarkdown ? `${note.content.trim()}\n\n${imageMarkdown}` : note.content,
+      });
+      const additions = [...attachments.additions, this.#textAddition(filePath, content)];
+      await this.#addAtomicIndexUpdate(snapshot, filePath, content, additions);
+
+      try {
+        await this.#commitAdditions(
+          snapshot.headSha,
+          additions,
+          `capture-reflect: save note for ${note.date}`,
+        );
+        return {
+          path: filePath,
+          action: "created",
+          attachmentPaths: attachments.stored.map((attachment) => attachment.path),
+        };
+      } catch (error) {
+        if (!(error instanceof GitHubCommitConflictError) || attempt === WRITE_RETRIES - 1) {
+          throw error;
+        }
+      }
+    }
+    throw new Error("Could not save note after concurrent GitHub updates.");
+  }
+
+  async captureJournal(input: CaptureJournalInput): Promise<CaptureResult> {
+    assertDate(input.date);
+    assertKeyword(input.keyword);
+    const directory = journalDirectory(input.date);
+    const compact = compactDate(input.date);
+
+    for (let attempt = 0; attempt < WRITE_RETRIES; attempt += 1) {
+      const snapshot = await this.#writeSnapshot();
+      const existing = snapshot.records.filter(
+        ({ path }) =>
+          path.startsWith(`${directory}/`) &&
+          path.slice(directory.length + 1).startsWith(compact) &&
+          path.endsWith(".md"),
+      );
+      if (existing.length > 1) {
+        throw new Error(
+          `Multiple journal files already exist for ${input.date}; choose one explicitly before writing.`,
+        );
+      }
+
+      const attachments = this.#prepareAttachments(
+        snapshot.paths,
+        "journal",
+        input.date,
+        input.keyword,
+        input.attachments ?? [],
+      );
+      const imageMarkdown = attachmentMarkdown(attachments.stored);
+      const fragment = buildJournalFragment({
+        ...input,
+        content: imageMarkdown ? `${input.content.trim()}\n\n${imageMarkdown}` : input.content,
+      });
+      const existingRecord = existing[0];
+      const filePath = existingRecord?.path ?? `${directory}/${journalFileName(input)}`;
+      const content = existingRecord
+        ? `${await this.#loadTextBlob(existingRecord.sha)}\n${fragment}`
+        : fragment;
+      const additions = [...attachments.additions, this.#textAddition(filePath, content)];
+      await this.#addAtomicIndexUpdate(snapshot, filePath, content, additions);
+
+      try {
+        await this.#commitAdditions(
+          snapshot.headSha,
+          additions,
+          existingRecord
+            ? `capture-reflect: append journal entry for ${input.date}`
+            : `capture-reflect: record journal entry for ${input.date}`,
+        );
+        return {
+          path: filePath,
+          action: existingRecord ? "appended" : "created",
+          attachmentPaths: attachments.stored.map((attachment) => attachment.path),
+        };
+      } catch (error) {
+        if (!(error instanceof GitHubCommitConflictError) || attempt === WRITE_RETRIES - 1) {
+          throw error;
+        }
+      }
+    }
+    throw new Error("Could not save journal after concurrent GitHub updates.");
+  }
+
+  async saveReview(input: SaveReviewInput): Promise<{ path: string; action: "created" }> {
+    const review = await prepareReview(this.#store, input);
+    for (let attempt = 0; attempt < WRITE_RETRIES; attempt += 1) {
+      const snapshot = await this.#writeSnapshot();
+      if (snapshot.paths.has(review.path)) {
+        throw new Error(`A review already exists at ${review.path}.`);
+      }
+      const additions = [this.#textAddition(review.path, review.content)];
+      await this.#addAtomicIndexUpdate(snapshot, review.path, review.content, additions);
+      try {
+        await this.#commitAdditions(
+          snapshot.headSha,
+          additions,
+          `capture-reflect: save review for ${input.from} to ${input.to}`,
+        );
+        return { path: review.path, action: "created" };
+      } catch (error) {
+        if (!(error instanceof GitHubCommitConflictError) || attempt === WRITE_RETRIES - 1) {
+          throw error;
+        }
+      }
+    }
+    throw new Error("Could not save review after concurrent GitHub updates.");
+  }
+
+  async #writeSnapshot(): Promise<WriteSnapshot> {
+    const commit = await this.#rest<GitHubCommitLookup>(
+      `repos/${this.#repositoryPath}/commits/${encodeURIComponent(this.#branch)}`,
+    );
+    const tree = await this.#rest<GitHubTree>(
+      `repos/${this.#repositoryPath}/git/trees/${encodeURIComponent(commit.commit.tree.sha)}?recursive=1`,
+    );
+    if (tree.truncated) {
+      throw new Error("The GitHub repository tree is too large to update safely.");
+    }
+
+    const paths = new Set<string>();
+    const records: GitHubRecordPath[] = [];
+    let indexSha: string | undefined;
+    for (const item of tree.tree) {
+      if (item.type !== "blob" || !item.path || !item.sha) continue;
+      paths.add(item.path);
+      if (item.path === SEARCH_INDEX_PATH) {
+        indexSha = item.sha;
+      } else if (
+        item.path.endsWith(".md") &&
+        (item.path.startsWith("journals/") ||
+          item.path.startsWith("notes/") ||
+          item.path.startsWith("reviews/"))
+      ) {
+        records.push({ path: item.path, sha: item.sha });
+      }
+    }
+    return {
+      headSha: commit.sha,
+      records,
+      paths,
+      ...(indexSha ? { indexSha } : {}),
+    };
+  }
+
+  #prepareAttachments(
+    existingPaths: Set<string>,
+    type: "journal" | "note",
+    date: string,
+    keyword: string,
+    attachments: RecordAttachment[],
+  ): { stored: Array<{ path: string; alt: string }>; additions: CommitAddition[] } {
+    const baseDirectory = type === "journal" ? journalDirectory(date) : noteDirectory(date);
+    const imageDirectory = `${baseDirectory}/images`;
+    const compact = compactDate(date);
+    const reserved = new Set(existingPaths);
+    const stored: Array<{ path: string; alt: string }> = [];
+    const additions: CommitAddition[] = [];
+
+    for (const [index, attachment] of attachments.entries()) {
+      let suffix = index + 1;
+      let filePath: string;
+      while (true) {
+        filePath = `${imageDirectory}/${compact}-${keyword}-${suffix}.${attachment.extension}`;
+        if (!reserved.has(filePath)) break;
+        suffix += 1;
+      }
+      reserved.add(filePath);
+      stored.push({ path: filePath, alt: attachment.alt });
+      additions.push({
+        path: filePath,
+        contents: Buffer.from(attachment.data).toString("base64"),
+      });
+    }
+    return { stored, additions };
+  }
+
+  async #addAtomicIndexUpdate(
+    snapshot: WriteSnapshot,
+    recordPath: string,
+    content: string,
+    additions: CommitAddition[],
+  ): Promise<void> {
+    if (!snapshot.indexSha) return;
+    const index = await this.#loadIndex(snapshot.indexSha);
+    if (!index || !indexIsCurrent(index, snapshot.records)) return;
+
+    const next: SearchIndex = {
+      ...index,
+      records: {
+        ...index.records,
+        [recordPath]: {
+          sha: gitBlobSha(content),
+          bloom: buildBloom(content),
+        },
+      },
+    };
+    additions.push(this.#textAddition(SEARCH_INDEX_PATH, JSON.stringify(next)));
+  }
+
+  async #loadIndex(sha: string): Promise<SearchIndex | undefined> {
+    try {
+      const text = await this.#loadTextBlob(sha);
+      const parsed = JSON.parse(text) as unknown;
+      return validSearchIndex(parsed) ? parsed : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async #loadTextBlob(sha: string): Promise<string> {
+    const blob = await this.#rest<GitHubBlob>(
+      `repos/${this.#repositoryPath}/git/blobs/${encodeURIComponent(sha)}`,
+    );
+    if (blob.encoding !== "base64" || blob.sha !== sha) {
+      throw new Error(`GitHub returned an unsupported blob response for ${sha}.`);
+    }
+    return Buffer.from(blob.content.replaceAll("\n", ""), "base64").toString("utf8");
+  }
+
+  #textAddition(path: string, content: string): CommitAddition {
+    return { path, contents: Buffer.from(content, "utf8").toString("base64") };
+  }
+
+  async #commitAdditions(
+    expectedHeadOid: string,
+    additions: CommitAddition[],
+    message: string,
+  ): Promise<void> {
+    const mutation = `mutation($input: CreateCommitOnBranchInput!) {
+      createCommitOnBranch(input: $input) { commit { oid } }
+    }`;
+    const response = await this.#fetch(new URL("graphql", this.#apiBaseUrl), {
+      method: "POST",
+      headers: this.#headers(),
+      body: JSON.stringify({
+        query: mutation,
+        variables: {
+          input: {
+            branch: {
+              repositoryNameWithOwner: this.#repository,
+              branchName: this.#branch,
+            },
+            expectedHeadOid,
+            message: { headline: message },
+            fileChanges: { additions },
+          },
+        },
+      }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as GitHubGraphQlEnvelope<{
+      createCommitOnBranch: { commit: { oid: string } } | null;
+    }>;
+    if (!response.ok) {
+      throw new Error(
+        `GitHub GraphQL commit failed (${response.status}): ${payload.message ?? response.statusText}`,
+      );
+    }
+    if (payload.errors?.length) {
+      const errorText = payload.errors.map((error) => error.message ?? "Unknown error").join("; ");
+      if (/expected.*head|head.*oid|does not match|out of date/i.test(errorText)) {
+        throw new GitHubCommitConflictError(errorText);
+      }
+      throw new Error(`GitHub GraphQL commit failed: ${errorText}`);
+    }
+    if (!payload.data?.createCommitOnBranch?.commit.oid) {
+      throw new Error("GitHub GraphQL commit returned no commit oid.");
+    }
+  }
+
+  async #rest<T>(apiPath: string): Promise<T> {
+    const response = await this.#fetch(new URL(apiPath, this.#apiBaseUrl), {
+      method: "GET",
+      headers: this.#headers(),
+    });
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { message?: string };
+      throw new Error(
+        `GitHub API GET failed (${response.status}): ${payload.message ?? response.statusText}`,
+      );
+    }
+    return (await response.json()) as T;
+  }
+
+  #headers(): Record<string, string> {
+    return {
+      accept: "application/vnd.github+json",
+      authorization: `Bearer ${this.#token}`,
+      "content-type": "application/json",
+      "user-agent": "capture-reflect-mcp",
+      "x-github-api-version": "2022-11-28",
+    };
+  }
+}
+
+export function withAtomicIndexedGitHubWrites(
+  store: RecordsStore,
+  options: AtomicIndexedWriteOptions,
+): RecordsStore {
+  const writer = new AtomicIndexedWriter(store, options);
+  return {
+    captureJournal: (input) => writer.captureJournal(input),
+    captureNote: (input) => writer.captureNote(input),
+    saveReview: (input) => writer.saveReview(input),
+    getRecords: (input) => store.getRecords(input),
+    searchRecords: (input) => store.searchRecords(input),
+  };
+}
