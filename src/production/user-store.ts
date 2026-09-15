@@ -1,5 +1,6 @@
 import type { RecordsStore } from "../storage/records-store.js";
 import { GitHubRecordsStore } from "../storage/github-records.js";
+import { withFastGitHubSearch } from "../storage/github-search.js";
 import type { ProductionConfig } from "./config.js";
 import { ConnectionStore, type UserConnection } from "./connection-store.js";
 import { refreshGitHubTokens } from "./github-auth.js";
@@ -48,10 +49,16 @@ export async function recordsStoreForUser(
     branch: connection.branch,
     fetch: tracker.fetch,
   });
+  const optimizedStore = withFastGitHubSearch(githubStore, {
+    repository,
+    token: connection.accessToken,
+    branch: connection.branch,
+    fetch: tracker.fetch,
+  });
 
   return {
     connection,
-    store: withGitHubRequestObservability(githubStore, tracker),
+    store: withGitHubRequestObservability(optimizedStore, tracker),
   };
 }
 
