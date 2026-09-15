@@ -3,6 +3,10 @@ import { GitHubRecordsStore } from "../storage/github-records.js";
 import type { ProductionConfig } from "./config.js";
 import { ConnectionStore, type UserConnection } from "./connection-store.js";
 import { refreshGitHubTokens } from "./github-auth.js";
+import {
+  createGitHubRequestTracker,
+  withGitHubRequestObservability,
+} from "./github-request-observability.js";
 
 export async function connectionUserIdForSubject(
   connections: Pick<ConnectionStore, "userIdsForGitHub">,
@@ -36,13 +40,18 @@ export async function recordsStoreForUser(
   }
   const repository = connection.repository;
   if (!repository) throw new Error("GitHub repository selection is missing.");
+
+  const tracker = createGitHubRequestTracker();
+  const githubStore = new GitHubRecordsStore({
+    repository,
+    token: connection.accessToken,
+    branch: connection.branch,
+    fetch: tracker.fetch,
+  });
+
   return {
     connection,
-    store: new GitHubRecordsStore({
-      repository,
-      token: connection.accessToken,
-      branch: connection.branch,
-    }),
+    store: withGitHubRequestObservability(githubStore, tracker),
   };
 }
 
