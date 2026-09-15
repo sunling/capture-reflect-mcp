@@ -1,6 +1,11 @@
 import type { RecordsStore } from "../storage/records-store.js";
 
-type GitHubRequestCategory = "tree" | "contents_read" | "contents_write" | "other";
+type GitHubRequestCategory =
+  | "tree"
+  | "contents_read"
+  | "contents_write"
+  | "graphql_read"
+  | "other";
 
 type RequestCounts = Record<GitHubRequestCategory, number>;
 
@@ -24,11 +29,18 @@ export interface GitHubRequestTracker {
 }
 
 function emptyCounts(): RequestCounts {
-  return { tree: 0, contents_read: 0, contents_write: 0, other: 0 };
+  return {
+    tree: 0,
+    contents_read: 0,
+    contents_write: 0,
+    graphql_read: 0,
+    other: 0,
+  };
 }
 
 function requestCategory(url: URL, method: string): GitHubRequestCategory {
   if (url.pathname.includes("/git/trees/")) return "tree";
+  if (url.pathname === "/graphql" && method === "POST") return "graphql_read";
   if (url.pathname.includes("/contents/")) {
     if (method === "GET") return "contents_read";
     if (method === "PUT") return "contents_write";
@@ -93,6 +105,7 @@ function diffCounts(after: RequestCounts, before: RequestCounts): RequestCounts 
     tree: after.tree - before.tree,
     contents_read: after.contents_read - before.contents_read,
     contents_write: after.contents_write - before.contents_write,
+    graphql_read: after.graphql_read - before.graphql_read,
     other: after.other - before.other,
   };
 }
