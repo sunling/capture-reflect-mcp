@@ -44,14 +44,18 @@ function numericHeader(headers: Headers, name: string): number | undefined {
 }
 
 function readRateLimit(headers: Headers): GitHubRateLimitSnapshot | undefined {
-  const rateLimit: GitHubRateLimitSnapshot = {
-    limit: numericHeader(headers, "x-ratelimit-limit"),
-    remaining: numericHeader(headers, "x-ratelimit-remaining"),
-    used: numericHeader(headers, "x-ratelimit-used"),
-    reset: numericHeader(headers, "x-ratelimit-reset"),
-    resource: headers.get("x-ratelimit-resource") ?? undefined,
-  };
-  return Object.values(rateLimit).some((value) => value !== undefined) ? rateLimit : undefined;
+  const rateLimit: GitHubRateLimitSnapshot = {};
+  const limit = numericHeader(headers, "x-ratelimit-limit");
+  const remaining = numericHeader(headers, "x-ratelimit-remaining");
+  const used = numericHeader(headers, "x-ratelimit-used");
+  const reset = numericHeader(headers, "x-ratelimit-reset");
+  const resource = headers.get("x-ratelimit-resource");
+  if (limit !== undefined) rateLimit.limit = limit;
+  if (remaining !== undefined) rateLimit.remaining = remaining;
+  if (used !== undefined) rateLimit.used = used;
+  if (reset !== undefined) rateLimit.reset = reset;
+  if (resource !== null) rateLimit.resource = resource;
+  return Object.keys(rateLimit).length > 0 ? rateLimit : undefined;
 }
 
 export function createGitHubRequestTracker(
