@@ -44,8 +44,25 @@ interface GitHubFile extends GitHubContentItem {
 
 interface GitHubTree {
   truncated: boolean;
-  tree: Array<{ path?: string; type?: string }>;
+  tree: Array<{ path?: string; type?: string; sha?: string }>;
 }
+
+interface GitHubRecordPath {
+  path: string;
+  sha: string;
+}
+
+interface GitHubGraphQlBlob {
+  oid: string;
+  text: string | null;
+}
+
+interface GitHubGraphQlEnvelope<T> {
+  data?: T;
+  errors?: Array<{ message?: string }>;
+}
+
+const GRAPHQL_BLOB_BATCH_SIZE = 50;
 
 class GitHubApiError extends Error {
   constructor(
@@ -60,27 +77,10 @@ function encodedPath(value: string): string {
   return value.split("/").map(encodeURIComponent).join("/");
 }
 
-async function mapWithConcurrency<T, U>(
-  values: T[],
-  concurrency: number,
-  transform: (value: T) => Promise<U>,
-): Promise<U[]> {
-  const results = new Array<U>(values.length);
-  let next = 0;
-
-  async function worker(): Promise<void> {
-    while (next < values.length) {
-      const index = next++;
-      results[index] = await transform(values[index]!);
-    }
-  }
-
-  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, worker));
-  return results;
-}
-
 export class GitHubRecordsStore implements RecordsStore {
   readonly #repositoryPath: string;
+  readonly #repositoryOwner: string;
+  readonly #repositoryName: string;
   readonly #token: string;
   readonly #branch: string;
   readonly #apiBaseUrl: string;
@@ -93,6 +93,8 @@ export class GitHubRecordsStore implements RecordsStore {
     }
     if (!options.token.trim()) throw new Error("GitHub token must not be empty.");
 
+    this.#repositoryOwner = parts[0]!;
+    this.#repositoryName = parts[1]!;
     this.#repositoryPath = parts.map(encodeURIComponent).join("/");
     this.#token = options.token.trim();
     this.#branch = options.branch?.trim() || "main";
@@ -294,24 +296,31 @@ export class GitHubRecordsStore implements RecordsStore {
     if (options.from > options.to) throw new Error("from must be on or before to.");
 
     const requested = new Set(options.types ?? ["journal", "note"]);
-    const paths = (await this.#listRecordPaths()).filter((filePath) => {
-      const date = recordDateFromPath(filePath);
-      const type = filePath.startsWith("journals/") ? "journal" : filePath.startsWith("reviews/") ? "review" : "note";
+    const candidates = (await this.#listRecordPaths()).filter(({ path }) => {
+      const date = recordDateFromPath(path);
+      const type = path.startsWith("journals/")
+        ? "journal"
+        : path.startsWith("reviews/")
+          ? "review"
+          : "note";
       return Boolean(
         date && date >= options.from && date <= options.to && requested.has(type),
       );
     });
 
-    const records = await mapWithConcurrency(paths, 8, async (filePath): Promise<StoredRecord> => {
-      const file = await this.#getFile(filePath);
-      return {
-        path: filePath,
-        date: recordDateFromPath(filePath)!,
-        type: filePath.startsWith("journals/") ? "journal" : filePath.startsWith("reviews/") ? "review" : "note",
-        content: file.content,
-      };
-    });
-    return records.sort((a, b) => a.path.localeCompare(b.path));
+    const files = await this.#getFiles(candidates);
+    return candidates
+      .map(({ path }): StoredRecord => ({
+        path,
+        date: recordDateFromPath(path)!,
+        type: path.startsWith("journals/")
+          ? "journal"
+          : path.startsWith("reviews/")
+            ? "review"
+            : "note",
+        content: files.get(path)!.content,
+      }))
+      .sort((a, b) => a.path.localeCompare(b.path));
   }
 
   async searchRecords(options: {
@@ -373,7 +382,7 @@ export class GitHubRecordsStore implements RecordsStore {
     }
   }
 
-  async #listRecordPaths(): Promise<string[]> {
+  async #listRecordPaths(): Promise<GitHubRecordPath[]> {
     const tree = (await this.#request<GitHubTree>(
       "GET",
       `repos/${this.#repositoryPath}/git/trees/${encodeURIComponent(this.#branch)}?recursive=1`,
@@ -382,12 +391,65 @@ export class GitHubRecordsStore implements RecordsStore {
       throw new Error("The GitHub repository tree is too large to search safely.");
     }
     return tree.tree
-      .flatMap((item) => (item.type === "blob" && item.path ? [item.path] : []))
+      .flatMap((item) =>
+        item.type === "blob" && item.path && item.sha
+          ? [{ path: item.path, sha: item.sha }]
+          : [],
+      )
       .filter(
-        (filePath) =>
-          filePath.endsWith(".md") &&
-          (filePath.startsWith("journals/") || filePath.startsWith("notes/") || filePath.startsWith("reviews/")),
+        ({ path }) =>
+          path.endsWith(".md") &&
+          (path.startsWith("journals/") || path.startsWith("notes/") || path.startsWith("reviews/")),
       );
+  }
+
+  async #getFiles(
+    records: GitHubRecordPath[],
+  ): Promise<Map<string, { content: string; sha: string }>> {
+    const files = new Map<string, { content: string; sha: string }>();
+    for (let offset = 0; offset < records.length; offset += GRAPHQL_BLOB_BATCH_SIZE) {
+      const batch = records.slice(offset, offset + GRAPHQL_BLOB_BATCH_SIZE);
+      const variableDefinitions = batch
+        .map((_, index) => `$oid${index}: GitObjectID!`)
+        .join(", ");
+      const selections = batch
+        .map(
+          (_, index) =>
+            `blob${index}: object(oid: $oid${index}) { ... on Blob { oid text } }`,
+        )
+        .join("\n");
+      const query = `query($owner: String!, $name: String!, ${variableDefinitions}) {
+        repository(owner: $owner, name: $name) {
+          ${selections}
+        }
+      }`;
+      const variables: Record<string, string> = {
+        owner: this.#repositoryOwner,
+        name: this.#repositoryName,
+      };
+      for (const [index, record] of batch.entries()) {
+        variables[`oid${index}`] = record.sha;
+      }
+
+      const data = await this.#requestGraphQl<{
+        repository: Record<string, GitHubGraphQlBlob | null> | null;
+      }>(query, variables);
+      if (!data.repository) {
+        throw new Error("GitHub GraphQL could not resolve the records repository.");
+      }
+
+      for (const [index, record] of batch.entries()) {
+        const blob = data.repository[`blob${index}`];
+        if (!blob || blob.text === null) {
+          throw new Error(`GitHub returned an unsupported blob response for ${record.path}.`);
+        }
+        if (blob.oid !== record.sha) {
+          throw new Error(`GitHub returned an unexpected blob for ${record.path}.`);
+        }
+        files.set(record.path, { content: blob.text, sha: blob.oid });
+      }
+    }
+    return files;
   }
 
   async #listDirectory(directory: string): Promise<GitHubContentItem[]> {
@@ -434,6 +496,35 @@ export class GitHubRecordsStore implements RecordsStore {
         ...(sha ? { sha } : {}),
       },
     );
+  }
+
+  async #requestGraphQl<T>(query: string, variables: Record<string, string>): Promise<T> {
+    const response = await this.#fetch(new URL("graphql", this.#apiBaseUrl), {
+      method: "POST",
+      headers: {
+        accept: "application/vnd.github+json",
+        authorization: `Bearer ${this.#token}`,
+        "content-type": "application/json",
+        "user-agent": "capture-reflect-mcp",
+      },
+      body: JSON.stringify({ query, variables }),
+    });
+    const payload = (await response.json().catch(() => ({}))) as GitHubGraphQlEnvelope<T> & {
+      message?: string;
+    };
+    if (!response.ok) {
+      throw new GitHubApiError(
+        response.status,
+        `GitHub GraphQL failed (${response.status}): ${payload.message ?? response.statusText}`,
+      );
+    }
+    if (payload.errors?.length) {
+      throw new Error(
+        `GitHub GraphQL failed: ${payload.errors.map((error) => error.message ?? "Unknown error").join("; ")}`,
+      );
+    }
+    if (!payload.data) throw new Error("GitHub GraphQL returned no data.");
+    return payload.data;
   }
 
   async #request<T>(
