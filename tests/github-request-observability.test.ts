@@ -33,13 +33,17 @@ describe("GitHub request observability", () => {
     await tracker.fetch("https://api.github.com/repos/sunling/records/contents/notes/2026/note.md", {
       method: "PUT",
     });
+    await tracker.fetch("https://api.github.com/graphql", {
+      method: "POST",
+    });
 
     expect(tracker.snapshot()).toEqual({
-      total: 3,
+      total: 4,
       byCategory: {
         tree: 1,
         contents_read: 1,
         contents_write: 1,
+        graphql_read: 1,
         other: 0,
       },
       rateLimit: {
@@ -64,8 +68,8 @@ describe("GitHub request observability", () => {
         await tracker.fetch("https://api.github.com/repos/sunling/records/git/trees/main?recursive=1", {
           method: "GET",
         });
-        await tracker.fetch("https://api.github.com/repos/sunling/records/contents/journals/2026/entry.md", {
-          method: "GET",
+        await tracker.fetch("https://api.github.com/graphql", {
+          method: "POST",
         });
         return [];
       },
@@ -83,8 +87,9 @@ describe("GitHub request observability", () => {
         requests: 2,
         byCategory: {
           tree: 1,
-          contents_read: 1,
+          contents_read: 0,
           contents_write: 0,
+          graphql_read: 1,
           other: 0,
         },
         rateLimit: {
