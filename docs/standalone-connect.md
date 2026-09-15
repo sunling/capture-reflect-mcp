@@ -11,7 +11,7 @@ The old hosted-auth flow remains available while `WORKOS_STANDALONE_ENABLED=fals
 
 ## Prerequisites
 
-1. In the GitHub App settings, retain `/github/callback` and add the exact new callback `https://api.bysunling.com/auth/github/callback` (use the staging origin when testing). The install setup URL remains `/github/installed`.
+1. In the GitHub App settings, retain `/github/callback` and add the exact new callback `https://api.bysunling.com/auth/github/callback` (use the staging origin when testing). The install setup URL remains `/github/installed`. Disable **Request user authorization (OAuth) during installation**: this application starts the state-bound OAuth flow itself, and GitHub's automatic post-install authorization starts a second callback without that state.
 2. Add **Account permissions → Email addresses: Read-only** to the GitHub App. Approve the permission update where required. Standalone login calls `/user/emails` and requires a verified primary email; it never trusts an unverified profile email. Existing Contents and Metadata permissions remain unchanged.
 3. Store a WorkOS environment API key as the server-only `WORKOS_API_KEY` in Netlify. Do not put this key in a public client or paste it into chat. The key must permit user lookup/creation and Standalone Connect completion in the same environment as `WORKOS_AUTHKIT_DOMAIN`.
 4. Complete the identity mapping checks below before switching the production Login URI.

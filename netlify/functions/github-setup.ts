@@ -74,18 +74,22 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
     return `<option value="${escapeHtml(value)}">${escapeHtml(repository.full_name)}</option>`;
   }).join("");
   return html("Connect your records", `
-    <div class="eyebrow">✓ GitHub authorized</div>
-    <h1>Choose where your records live</h1>
-    <p>GitHub account: <strong>${escapeHtml(connection.githubLogin)}</strong></p>
+    <ol class="connection-steps" aria-label="Connection progress">
+      <li class="connection-step complete"><span class="step-number">1 · Done</span><strong>Connect GitHub</strong></li>
+      <li class="connection-step current" aria-current="step"><span class="step-number">2 · Now</span><strong>Choose repository</strong></li>
+      <li class="connection-step"><span class="step-number">3 · Next</span><strong>Return to your chat</strong></li>
+    </ol>
+    <div class="eyebrow">GitHub connected as ${escapeHtml(connection.githubLogin)}</div>
+    <h1>Choose your records repository</h1>
     ${switchAccountLink(token, completion?.externalAuthId)}
-    <p class="lede">Capture &amp; Reflect writes your journal entries and notes directly to a GitHub repository you control.</p>
+    <p class="lede">GitHub controls which repositories Capture &amp; Reflect may access. Choose which accessible repository should store your journals, notes, and reviews.</p>
     <form method="post" action="/setup/repository">
       <input type="hidden" name="token" value="${escapeHtml(token)}">
       <input type="hidden" name="github_user_id" value="${connection.githubUserId}">
       <div class="field">
         <label for="repository">Records repository</label>
         <select id="repository" name="repository" required>${options}</select>
-        <p class="hint">Only repositories granted to the Capture &amp; Reflect GitHub App appear here.</p>
+        <p class="hint">Only repositories you allowed on GitHub appear here.</p>
       </div>
       <input type="hidden" id="timezone" name="timezone" value="UTC">
       <div class="field">
@@ -93,7 +97,7 @@ async function repositoryPage(userId: string, token: string): Promise<Response> 
         <div class="timezone-display" id="timezone-display">UTC · detected automatically</div>
         <p class="hint">Used to decide which date your journal entries and notes belong to.</p>
       </div>
-      <button type="submit">Save &amp; connect</button>
+      <button type="submit">Use this repository</button>
       <div class="privacy-note"><span>●</span><div>Your writing and images go directly to the GitHub repository you choose. Capture &amp; Reflect stores only the encrypted connection details needed to access it.</div></div>
     </form>
     <script>
@@ -158,11 +162,16 @@ async function saveRepository(request: Request): Promise<Response> {
       .replaceAll("\u2028", "\\u2028")
       .replaceAll("\u2029", "\\u2029");
     return html("Returning to your AI client", `
+      <ol class="connection-steps" aria-label="Connection progress">
+        <li class="connection-step complete"><span class="step-number">1 · Done</span><strong>Connect GitHub</strong></li>
+        <li class="connection-step complete"><span class="step-number">2 · Done</span><strong>Choose repository</strong></li>
+        <li class="connection-step current" aria-current="step"><span class="step-number">3 · Now</span><strong>Return to your chat</strong></li>
+      </ol>
       <div class="success">✓</div>
-      <div class="eyebrow">Connection saved</div>
-      <h1>Finishing connection…</h1>
-      <p class="lede">You will be returned to your AI client automatically.</p>
-      <p><a class="button" href="${escapeHtml(destination)}">Continue</a></p>
+      <div class="eyebrow">Repository connected</div>
+      <h1>Returning to your chat…</h1>
+      <p class="lede">Your repository is ready. This page will continue automatically.</p>
+      <p><a class="button" href="${escapeHtml(destination)}">Return now</a></p>
       <script>window.location.replace(${scriptDestination});</script>
     `);
   }

@@ -98,6 +98,12 @@ export function brandPage(options: BrandPageOptions): Response {
     .reading-card, .setup-card { padding: clamp(26px, 6vw, 54px); border: 1px solid var(--line); border-radius: 28px 7px 28px 7px; background: rgba(255,253,248,.92); box-shadow: 0 18px 45px rgba(53,61,53,.08); }
     .reading-card h1, .setup-card h1 { font-size: clamp(36px, 7vw, 56px); }
     .reading-card p { color: var(--muted); font-size: 17px; }
+    .connection-steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 0 0 30px; padding: 0; list-style: none; }
+    .connection-step { min-height: 72px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 12px; color: var(--muted); font-size: 13px; line-height: 1.35; }
+    .connection-step strong { display: block; margin-top: 5px; color: inherit; font-size: 14px; }
+    .connection-step.complete { background: var(--green-soft); color: var(--green); }
+    .connection-step.current { border-color: var(--green); background: var(--paper); color: var(--ink); box-shadow: 0 0 0 2px rgba(21,91,67,.08); }
+    .step-number { font-weight: 800; letter-spacing: .04em; }
     .field { margin-top: 22px; }
     label { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 750; }
     .hint { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
@@ -119,6 +125,8 @@ export function brandPage(options: BrandPageOptions): Response {
       .paper { min-height: 330px; }
       .principles, .trust { grid-template-columns: 1fr; }
       .principles { gap: 30px; }
+      .connection-steps { grid-template-columns: 1fr; }
+      .connection-step { min-height: auto; }
       .site-footer { flex-direction: column; }
     }
   </style>
