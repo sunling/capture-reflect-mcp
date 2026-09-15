@@ -15,20 +15,50 @@ function jsonResponse(value: unknown, status = 200): Response {
 
 class FakeGitHubApi {
   readonly files = new Map<string, FakeFile>();
+  readonly requests = {
+    tree: 0,
+    contentsRead: 0,
+    contentsWrite: 0,
+    graphql: 0,
+  };
   #revision = 0;
 
   readonly fetch: typeof globalThis.fetch = async (input, init) => {
     const url = new URL(
       input instanceof Request ? input.url : input instanceof URL ? input : input.toString(),
     );
+    const method = (init?.method ?? "GET").toUpperCase();
+
+    if (url.pathname === "/graphql" && method === "POST") {
+      this.requests.graphql += 1;
+      const body = JSON.parse(init?.body as string) as {
+        variables: Record<string, string>;
+      };
+      const repository: Record<string, { oid: string; text: string } | null> = {};
+      for (const [key, oid] of Object.entries(body.variables)) {
+        if (!key.startsWith("oid")) continue;
+        const index = key.slice("oid".length);
+        const match = [...this.files.entries()].find(([, file]) => file.sha === oid);
+        repository[`blob${index}`] = match
+          ? { oid, text: match[1].content.toString("utf8") }
+          : null;
+      }
+      return jsonResponse({ data: { repository } });
+    }
+
     const prefix = "/repos/sunling/records/";
     if (!url.pathname.startsWith(prefix)) return jsonResponse({ message: "Not found" }, 404);
     const route = url.pathname.slice(prefix.length);
 
-    if (init?.method === "GET" && route.startsWith("git/trees/")) {
+    if (method === "GET" && route.startsWith("git/trees/")) {
+      this.requests.tree += 1;
       return jsonResponse({
         truncated: false,
-        tree: [...this.files.keys()].map((path) => ({ path, type: "blob" })),
+        tree: [...this.files.entries()].map(([path, file]) => ({
+          path,
+          type: "blob",
+          sha: file.sha,
+        })),
       });
     }
 
@@ -39,8 +69,9 @@ class FakeGitHubApi {
         .map(decodeURIComponent)
         .join("/");
 
-      if (init?.method === "PUT") {
-        const body = JSON.parse(init.body as string) as {
+      if (method === "PUT") {
+        this.requests.contentsWrite += 1;
+        const body = JSON.parse(init?.body as string) as {
           content: string;
           sha?: string;
         };
@@ -59,6 +90,7 @@ class FakeGitHubApi {
         return jsonResponse({ content: { path: filePath, sha } }, existing ? 200 : 201);
       }
 
+      this.requests.contentsRead += 1;
       const file = this.files.get(filePath);
       if (file) {
         return jsonResponse({
@@ -118,7 +150,6 @@ describe("GitHubRecordsStore", () => {
     await expect(store.saveReview({ ...input, keyword: "outside", from: "2026-09-02" })).rejects.toThrow();
     expect(await store.getRecords({ from: "2026-09-01", to: "2026-09-30", types: ["review"] })).toHaveLength(1);
   });
-
 
   it("initializes the canonical record directories without overwriting files", async () => {
     const api = new FakeGitHubApi();
@@ -230,4 +261,26 @@ describe("GitHubRecordsStore", () => {
     expect(matches[0]?.type).toBe("note");
   });
 
+  it("batches record reads instead of issuing one contents request per file", async () => {
+    const api = new FakeGitHubApi();
+    const store = createStore(api);
+    for (let index = 0; index < 120; index += 1) {
+      const suffix = String(index).padStart(3, "0");
+      api.files.set(`notes/2026/202609/20260901-note-${suffix}.md`, {
+        content: Buffer.from(index === 119 ? "needle appears here" : `record ${index}`),
+        sha: `bulk-sha-${index}`,
+      });
+    }
+
+    const matches = await store.searchRecords({ query: "needle" });
+
+    expect(matches).toHaveLength(1);
+    expect(matches[0]?.path).toBe("notes/2026/202609/20260901-note-119.md");
+    expect(api.requests).toEqual({
+      tree: 1,
+      contentsRead: 0,
+      contentsWrite: 0,
+      graphql: 3,
+    });
+  });
 });
