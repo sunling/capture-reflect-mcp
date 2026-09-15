@@ -5,6 +5,7 @@ type GitHubRequestCategory =
   | "contents_read"
   | "contents_write"
   | "graphql_read"
+  | "graphql_write"
   | "other";
 
 type RequestCounts = Record<GitHubRequestCategory, number>;
@@ -34,13 +35,30 @@ function emptyCounts(): RequestCounts {
     contents_read: 0,
     contents_write: 0,
     graphql_read: 0,
+    graphql_write: 0,
     other: 0,
   };
 }
 
-function requestCategory(url: URL, method: string): GitHubRequestCategory {
+function graphqlMutation(body: BodyInit | null | undefined): boolean {
+  if (typeof body !== "string") return false;
+  try {
+    const payload = JSON.parse(body) as { query?: unknown };
+    return typeof payload.query === "string" && /^\s*mutation\b/.test(payload.query);
+  } catch {
+    return false;
+  }
+}
+
+function requestCategory(
+  url: URL,
+  method: string,
+  body?: BodyInit | null,
+): GitHubRequestCategory {
   if (url.pathname.includes("/git/trees/")) return "tree";
-  if (url.pathname === "/graphql" && method === "POST") return "graphql_read";
+  if (url.pathname === "/graphql" && method === "POST") {
+    return graphqlMutation(body) ? "graphql_write" : "graphql_read";
+  }
   if (url.pathname.includes("/contents/")) {
     if (method === "GET") return "contents_read";
     if (method === "PUT") return "contents_write";
@@ -83,7 +101,7 @@ export function createGitHubRequestTracker(
     );
     const method = (init?.method ?? (input instanceof Request ? input.method : "GET")).toUpperCase();
     total += 1;
-    byCategory[requestCategory(url, method)] += 1;
+    byCategory[requestCategory(url, method, init?.body)] += 1;
 
     const response = await baseFetch(input, init);
     rateLimit = readRateLimit(response.headers) ?? rateLimit;
@@ -106,6 +124,7 @@ function diffCounts(after: RequestCounts, before: RequestCounts): RequestCounts 
     contents_read: after.contents_read - before.contents_read,
     contents_write: after.contents_write - before.contents_write,
     graphql_read: after.graphql_read - before.graphql_read,
+    graphql_write: after.graphql_write - before.graphql_write,
     other: after.other - before.other,
   };
 }
