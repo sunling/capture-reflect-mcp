@@ -59,8 +59,9 @@ export function noteDirectory(date: string): string {
   return `notes/${compact.slice(0, 4)}/${compact.slice(0, 6)}`;
 }
 
-export function journalFileName(input: CaptureJournalInput): string {
-  return `${compactDate(input.date)}-${input.keyword}.md`;
+/** A daily journal is a container for the whole day, not its first fragment's topic. */
+export function journalFileName(input: Pick<CaptureJournalInput, "date">): string {
+  return `${compactDate(input.date)}.md`;
 }
 
 /** Only prepend this day-level heading and ID on creation; appends preserve existing identity. */
