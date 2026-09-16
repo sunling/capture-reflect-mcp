@@ -1,4 +1,4 @@
-import type { RecordsStore } from "../storage/records-store.js";
+import type { RecordEditInput, RecordsStore } from "../storage/records-store.js";
 import { ReviewSourceValidationError } from "../storage/reviews.js";
 
 type GitHubRequestCategory =
@@ -183,11 +183,14 @@ export function withGitHubRequestObservability(
   store: RecordsStore,
   tracker: GitHubRequestTracker,
 ): RecordsStore {
+  const updateRecord = store.updateRecord?.bind(store);
   return {
     captureJournal: (input) =>
       observedStoreMethod("capture_journal", tracker, () => store.captureJournal(input)),
     captureNote: (input) =>
       observedStoreMethod("capture_note", tracker, () => store.captureNote(input)),
+    ...(updateRecord ? { updateRecord: (input: RecordEditInput) =>
+      observedStoreMethod("update_record", tracker, () => updateRecord(input)) } : {}),
     saveReview: (input) =>
       observedStoreMethod("save_review", tracker, () => store.saveReview(input)),
     getRecords: (input) =>

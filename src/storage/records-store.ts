@@ -39,6 +39,22 @@ export interface CaptureNoteInput {
   attachments?: RecordAttachment[];
 }
 
+/** An existing journal or note, identified by the exact path returned by a read tool. */
+export interface RecordEditInput {
+  path: string;
+  /** Appending is an update that preserves existing content; replace edits one exact passage. */
+  mode: "append" | "replace";
+  content: string;
+  /** Required for replace; must be a unique exact passage from the current record. */
+  oldText?: string | undefined;
+}
+
+export interface RecordEditResult extends Record<string, unknown> {
+  path: string;
+  action: "appended" | "updated";
+  recordUrl?: string;
+}
+
 export interface SaveReviewInput {
   date: string;
   from: string;
@@ -52,11 +68,14 @@ export interface SaveReviewInput {
 export interface RecordsStore {
   saveReview(input: SaveReviewInput): Promise<{ path: string; action: "created" }>;
 
-  captureJournal(
-    input: CaptureJournalInput,
-  ): Promise<CaptureResult>;
+  /** Creates a journal or appends a new fragment to the journal for its date. */
+  captureJournal(input: CaptureJournalInput): Promise<CaptureResult>;
 
+  /** Creates a note, never silently overwriting a path collision. */
   captureNote(input: CaptureNoteInput): Promise<CaptureResult & { action: "created" }>;
+
+  /** Optional for legacy test doubles; configured stores implement it. */
+  updateRecord?(input: RecordEditInput): Promise<RecordEditResult>;
 
   getRecords(options: {
     from: string;
