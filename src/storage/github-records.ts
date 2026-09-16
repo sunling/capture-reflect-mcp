@@ -8,6 +8,7 @@ import {
   compactDate,
   journalDirectory,
   journalFileName,
+  journalHeading,
   noteDirectory,
   recordDateFromPath,
   isRangeReviewPath,
@@ -179,7 +180,7 @@ export class GitHubRecordsStore implements RecordsStore {
     try {
       await this.#putFile(
         filePath,
-        fragment,
+        `${journalHeading(input)}${fragment}`,
         `capture-reflect: record journal entry for ${input.date}`,
       );
       return {
