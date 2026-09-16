@@ -39,17 +39,17 @@ export interface CaptureNoteInput {
   attachments?: RecordAttachment[];
 }
 
-export interface NoteEditInput {
-  /** Exact path obtained from a record read, never reconstructed from a title. */
+/** An existing journal or note, identified by the exact path returned by a read tool. */
+export interface RecordEditInput {
   path: string;
-  /** Append an additional Markdown section, or replace a single exact passage. */
+  /** Appending is an update that preserves existing content; replace edits one exact passage. */
   mode: "append" | "replace";
   content: string;
-  /** Required only for replace: an exact unique excerpt from the existing note. */
+  /** Required for replace; must be a unique exact passage from the current record. */
   oldText?: string | undefined;
 }
 
-export interface NoteEditResult extends Record<string, unknown> {
+export interface RecordEditResult extends Record<string, unknown> {
   path: string;
   action: "appended" | "updated";
   recordUrl?: string;
@@ -68,12 +68,14 @@ export interface SaveReviewInput {
 export interface RecordsStore {
   saveReview(input: SaveReviewInput): Promise<{ path: string; action: "created" }>;
 
+  /** Creates a journal or appends a new fragment to the journal for its date. */
   captureJournal(input: CaptureJournalInput): Promise<CaptureResult>;
 
+  /** Creates a note, never silently overwriting a path collision. */
   captureNote(input: CaptureNoteInput): Promise<CaptureResult & { action: "created" }>;
 
-  /** Present on note-edit-capable stores. Older test doubles may omit it. */
-  updateNote?(input: NoteEditInput): Promise<NoteEditResult>;
+  /** Optional for legacy test doubles; configured stores implement it. */
+  updateRecord?(input: RecordEditInput): Promise<RecordEditResult>;
 
   getRecords(options: {
     from: string;
