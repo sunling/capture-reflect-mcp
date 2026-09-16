@@ -17,7 +17,7 @@ function unusedStore(): RecordsStore {
 }
 
 describe("capture routing metadata", () => {
-  it("routes technical observations about journaling to notes", async () => {
+  it("routes technical observations to notes and exposes only unified editing", async () => {
     const server = createServer(unusedStore(), "UTC");
     const [client, transport] = InMemoryTransport.createLinkedPair();
     await server.connect(transport);
@@ -32,8 +32,13 @@ describe("capture routing metadata", () => {
       const listing = await result;
       const journal = listing.tools.find((tool: any) => tool.name === "capture_journal");
       const note = listing.tools.find((tool: any) => tool.name === "capture_note");
-      expect(journal.description).toContain("Do not use this tool for technical observations");
-      expect(note.description).toContain("记录日记时 durationMs 是 6685");
+      const update = listing.tools.find((tool: any) => tool.name === "update_record");
+      expect(journal.description).toContain("not technical debugging");
+      expect(journal.description).toContain("automatically");
+      expect(note.description).toContain("recording system");
+      expect(update.description).toContain("journal or note");
+      expect(update.inputSchema.properties.mode.enum).toEqual(["append", "replace"]);
+      expect(listing.tools.some((tool: any) => tool.name === "update_note")).toBe(false);
     } finally {
       await server.close();
       await client.close();
