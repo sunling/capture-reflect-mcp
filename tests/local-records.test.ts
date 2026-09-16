@@ -17,8 +17,7 @@ describe("LocalRecordsStore", () => {
     await fs.rm(root, { recursive: true, force: true });
   });
 
-
-  it("saves linked reviews without mixing them into default reads or overwriting", async () => {
+  it("saves reviews with one metadata inventory and no duplicated source footer", async () => {
     const note = await store.captureNote({ date: "2026-09-01", title: "散步", keyword: "散步", content: "A walk helped me focus." });
     const input = { date: "2026-09-14", from: "2026-09-01", to: "2026-09-07", title: "Weekly review", keyword: "weekly", content: "## Interpretation (AI)\nWalking may help focus.\n\n## Questions\nDoes this recur?", sourcePaths: [note.path] };
     const result = await store.saveReview(input);
@@ -26,7 +25,8 @@ describe("LocalRecordsStore", () => {
     const reviews = await store.getRecords({ from: "2026-09-14", to: "2026-09-14", types: ["review"] });
     expect(reviews).toHaveLength(1);
     expect(reviews[0]?.content).toContain("from: 2026-09-01");
-    expect(reviews[0]?.content).toContain("../../../notes/2026/202609/20260901-%E6%95%A3%E6%AD%A5.md");
+    expect(reviews[0]?.content).toContain(`  - ${JSON.stringify(note.path)}`);
+    expect(reviews[0]?.content).not.toContain("../../../notes/");
     expect(reviews[0]?.content).toContain(input.content);
     expect(await store.getRecords({ from: "2026-09-01", to: "2026-09-30" })).toHaveLength(1);
     expect(await store.searchRecords({ query: "Does this recur?" })).toHaveLength(0);
