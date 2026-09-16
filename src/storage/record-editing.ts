@@ -23,9 +23,11 @@ type Options =
 
 /** Only canonical journal/note Markdown paths from record reads may be edited. */
 export function assertRecordPath(recordPath: string): void {
-  const match = /^(journals|notes)\/(\d{4})\/(\d{6})\/(\d{8})-([^/]+)\.md$/u.exec(recordPath);
+  const match = /^(journals|notes)\/(\d{4})\/(\d{6})\/(\d{8})(?:-([^/]+))?\.md$/u.exec(recordPath);
+  const suffix = match?.[5];
   if (!match || match[2] !== match[3]!.slice(0, 4) || match[3] !== match[4]!.slice(0, 6) ||
-      match[5] === "." || match[5] === ".." || match[5]!.includes("\\") || match[5]!.includes("..")) {
+      (match[1] === "notes" && !suffix) ||
+      (suffix !== undefined && (suffix === "." || suffix === ".." || suffix.includes("\\") || suffix.includes("..")))) {
     throw new Error("Provide an exact journal/note path returned by a record read under journals/ or notes/YYYY/YYYYMM/.");
   }
   const compact = match[4]!;

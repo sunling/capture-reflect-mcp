@@ -17,11 +17,11 @@ describe("review save dates", () => {
 
 describe("multilingual filenames", () => {
   it.each(["हिन्दी", "บันทึก", "cafe\u0301", "تَأَمُّل", "散步", "reflection"])(
-    "accepts keyword %s without rewriting it",
+    "accepts keyword %s but never uses it in the daily journal filename",
     (keyword) => {
       expect(() => assertKeyword(keyword)).not.toThrow();
       expect(journalFileName({ date: "2026-08-31", title: keyword, keyword, content: keyword }))
-        .toBe(`20260831-${keyword}.md`);
+        .toBe("20260831.md");
     },
   );
 
