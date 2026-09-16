@@ -46,10 +46,10 @@ export interface NoteEditInput {
   mode: "append" | "replace";
   content: string;
   /** Required only for replace: an exact unique excerpt from the existing note. */
-  oldText?: string;
+  oldText?: string | undefined;
 }
 
-export interface NoteEditResult {
+export interface NoteEditResult extends Record<string, unknown> {
   path: string;
   action: "appended" | "updated";
   recordUrl?: string;
