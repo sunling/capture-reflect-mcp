@@ -1,4 +1,4 @@
-import { assertDate, assertKeyword, compactDate } from "./record-utils.js";
+import { assertDate, assertKeyword, compactDate, createRecordId } from "./record-utils.js";
 import type { RecordsStore, SaveReviewInput } from "./records-store.js";
 
 export class ReviewSourceValidationError extends Error {
@@ -47,7 +47,7 @@ export async function prepareReview(store: RecordsStore, input: SaveReviewInput)
   const date = compactDate(input.date);
   const reviewPath = `reviews/${date.slice(0, 4)}/${date.slice(0, 6)}/${compactDate(input.from)}-${compactDate(input.to)}-${input.keyword}.md`;
   const metadata = [
-    "---", `title: ${JSON.stringify(input.title.trim())}`, `date: ${input.date}`,
+    "---", `id: ${createRecordId()}`, `title: ${JSON.stringify(input.title.trim())}`, `date: ${input.date}`,
     `from: ${input.from}`, `to: ${input.to}`, "type: review", "source_paths:",
     ...sources.map((source) => `  - ${JSON.stringify(source)}`), "---",
   ].join("\n");
