@@ -10,23 +10,14 @@ export interface SearchIndexEntry {
   bloom: string;
 }
 
-export interface SearchIndexV1 {
-  version: 1;
-  bloomBytes: number;
-  hashCount: number;
-  records: Record<string, SearchIndexEntry>;
-}
-
-export interface SearchIndexShardV2 {
-  version: 2;
+export interface SearchIndexShard {
   bloomBytes: number;
   hashCount: number;
   key: string;
   records: Record<string, SearchIndexEntry>;
 }
 
-export interface SearchIndexManifestV2 {
-  version: 2;
+export interface SearchIndexManifest {
   bloomBytes: number;
   hashCount: number;
   shards: Record<string, {
@@ -36,20 +27,17 @@ export interface SearchIndexManifestV2 {
   }>;
 }
 
-export const SEARCH_INDEX_V1_PATH = ".capture-reflect/search-index-v1.json";
-export const SEARCH_INDEX_V2_MANIFEST_PATH = ".capture-reflect/index-v2/manifest.json";
-export const SEARCH_INDEX_V2_PREFIX = ".capture-reflect/index-v2/";
+export const SEARCH_INDEX_MANIFEST_PATH = ".capture-reflect/index/manifest.json";
+export const SEARCH_INDEX_PREFIX = ".capture-reflect/index/";
 export const SEARCH_METADATA_README_PATH = ".capture-reflect/README.md";
 export const SEARCH_METADATA_README = `# Capture & Reflect metadata
 
 This folder is managed by Capture & Reflect. Your Markdown files under \`journals/\`, \`notes/\`, and \`reviews/\` remain the source of truth.
 
-\`index-v2/\` contains sharded record paths, Git blob SHAs, and Bloom filters that make private-repository search faster. A legacy \`search-index-v1.json\` may remain during migration. These files do not contain a second copy of your journal or note text.
+\`index/\` contains sharded record paths, Git blob SHAs, and Bloom filters that make private-repository search faster. These files do not contain a second copy of your journal or note text.
 
 Do not edit this folder manually. It is safe to delete the search index if necessary; a later search can rebuild it from the Markdown records.
 `;
-export const SEARCH_INDEX_VERSION_V1 = 1 as const;
-export const SEARCH_INDEX_VERSION_V2 = 2 as const;
 export const BLOOM_BYTES = 512;
 export const BLOOM_HASH_COUNT = 4;
 const BLOOM_BITS = BLOOM_BYTES * 8;
@@ -127,22 +115,10 @@ function validEntries(value: unknown): value is Record<string, SearchIndexEntry>
   );
 }
 
-export function validSearchIndexV1(value: unknown): value is SearchIndexV1 {
+export function validSearchIndexShard(value: unknown): value is SearchIndexShard {
   if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<SearchIndexV1>;
+  const candidate = value as Partial<SearchIndexShard>;
   return (
-    candidate.version === SEARCH_INDEX_VERSION_V1 &&
-    candidate.bloomBytes === BLOOM_BYTES &&
-    candidate.hashCount === BLOOM_HASH_COUNT &&
-    validEntries(candidate.records)
-  );
-}
-
-export function validSearchIndexShardV2(value: unknown): value is SearchIndexShardV2 {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<SearchIndexShardV2>;
-  return (
-    candidate.version === SEARCH_INDEX_VERSION_V2 &&
     candidate.bloomBytes === BLOOM_BYTES &&
     candidate.hashCount === BLOOM_HASH_COUNT &&
     typeof candidate.key === "string" &&
@@ -150,11 +126,10 @@ export function validSearchIndexShardV2(value: unknown): value is SearchIndexSha
   );
 }
 
-export function validSearchIndexManifestV2(value: unknown): value is SearchIndexManifestV2 {
+export function validSearchIndexManifest(value: unknown): value is SearchIndexManifest {
   if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<SearchIndexManifestV2>;
+  const candidate = value as Partial<SearchIndexManifest>;
   if (
-    candidate.version !== SEARCH_INDEX_VERSION_V2 ||
     candidate.bloomBytes !== BLOOM_BYTES ||
     candidate.hashCount !== BLOOM_HASH_COUNT ||
     !candidate.shards ||
@@ -187,7 +162,7 @@ export function shardKeyForPath(path: string): string {
 }
 
 export function shardPath(key: string): string {
-  return `${SEARCH_INDEX_V2_PREFIX}${key}.json`;
+  return `${SEARCH_INDEX_PREFIX}${key}.json`;
 }
 
 export function recordsDigest(records: GitHubRecordPath[]): string {
@@ -211,7 +186,7 @@ export function groupRecordPaths(records: GitHubRecordPath[]): Map<string, GitHu
 
 export function buildShardedIndex(
   entries: Record<string, SearchIndexEntry>,
-): { manifest: SearchIndexManifestV2; shards: Map<string, SearchIndexShardV2> } {
+): { manifest: SearchIndexManifest; shards: Map<string, SearchIndexShard> } {
   const grouped = new Map<string, Record<string, SearchIndexEntry>>();
   for (const [path, entry] of Object.entries(entries)) {
     const key = shardKeyForPath(path);
@@ -220,13 +195,12 @@ export function buildShardedIndex(
     grouped.set(key, records);
   }
 
-  const shards = new Map<string, SearchIndexShardV2>();
-  const manifestShards: SearchIndexManifestV2["shards"] = {};
+  const shards = new Map<string, SearchIndexShard>();
+  const manifestShards: SearchIndexManifest["shards"] = {};
   for (const [key, records] of [...grouped.entries()].sort(([left], [right]) => (
     left < right ? -1 : left > right ? 1 : 0
   ))) {
-    const shard: SearchIndexShardV2 = {
-      version: SEARCH_INDEX_VERSION_V2,
+    const shard: SearchIndexShard = {
       bloomBytes: BLOOM_BYTES,
       hashCount: BLOOM_HASH_COUNT,
       key,
@@ -242,7 +216,6 @@ export function buildShardedIndex(
   }
   return {
     manifest: {
-      version: SEARCH_INDEX_VERSION_V2,
       bloomBytes: BLOOM_BYTES,
       hashCount: BLOOM_HASH_COUNT,
       shards: manifestShards,
@@ -252,7 +225,7 @@ export function buildShardedIndex(
 }
 
 export function manifestMatchesRecords(
-  manifest: SearchIndexManifestV2,
+  manifest: SearchIndexManifest,
   records: GitHubRecordPath[],
 ): boolean {
   const groups = groupRecordPaths(records);

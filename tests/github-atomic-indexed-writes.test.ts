@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { withAtomicIndexedGitHubWrites } from "../src/storage/github-atomic-indexed-writes.js";
 import { withFastGitHubSearch } from "../src/storage/github-search.js";
-import { buildBloom } from "../src/storage/search-index.js";
 import type { RecordsStore } from "../src/storage/records-store.js";
 
 interface FakeFile {
@@ -27,7 +26,6 @@ class FakeGitHubApi {
   readonly files = new Map<string, FakeFile>();
   headSha = "head-1";
   treeSha = "tree-1";
-  indexWrites = 0;
   commitMutations = 0;
   lastCommitPaths: string[] = [];
   graphqlReads = 0;
@@ -67,23 +65,6 @@ class FakeGitHubApi {
         encoding: "base64",
         content: file.bytes.toString("base64"),
       });
-    }
-
-    if (
-      method === "PUT" &&
-      url.pathname.endsWith("/contents/.capture-reflect/search-index-v1.json")
-    ) {
-      this.indexWrites += 1;
-      const body = JSON.parse(init?.body as string) as { content: string };
-      const bytes = Buffer.from(body.content, "base64");
-      this.files.set(".capture-reflect/search-index-v1.json", {
-        path: ".capture-reflect/search-index-v1.json",
-        bytes,
-        sha: gitBlobSha(bytes),
-      });
-      this.headSha = `head-index-${this.indexWrites}`;
-      this.treeSha = `tree-index-${this.indexWrites}`;
-      return jsonResponse({ content: { sha: gitBlobSha(bytes) } }, 201);
     }
 
     if (method === "POST" && url.pathname === "/graphql") {
@@ -158,19 +139,8 @@ function createStore(api: FakeGitHubApi): RecordsStore {
 }
 
 describe("atomic indexed GitHub writes", () => {
-  it("migrates a current v1 index to v2 during capture", async () => {
+  it("leaves initial index creation to the first search", async () => {
     const api = new FakeGitHubApi();
-    const oldPath = "notes/2025/202501/20250101-old.md";
-    api.addText(oldPath, "old searchable content");
-    const oldSha = api.files.get(oldPath)!.sha;
-    api.addText(".capture-reflect/search-index-v1.json", JSON.stringify({
-      version: 1,
-      bloomBytes: 512,
-      hashCount: 4,
-      records: {
-        [oldPath]: { sha: oldSha, bloom: buildBloom("old searchable content") },
-      },
-    }));
     const store = createStore(api);
 
     await store.captureNote({
@@ -181,14 +151,7 @@ describe("atomic indexed GitHub writes", () => {
     });
 
     expect(api.commitMutations).toBe(1);
-    expect(api.lastCommitPaths).toEqual(expect.arrayContaining([
-      ".capture-reflect/README.md",
-      ".capture-reflect/index-v2/notes/2025.json",
-      ".capture-reflect/index-v2/notes/2026.json",
-      ".capture-reflect/index-v2/manifest.json",
-      "notes/2026/202609/20260916-new-note.md",
-    ]));
-    expect(api.lastCommitPaths).not.toContain(".capture-reflect/search-index-v1.json");
+    expect(api.lastCommitPaths).toEqual(["notes/2026/202609/20260916-new-note.md"]);
   });
 
   it("commits note, attachment, and a fresh search index together", async () => {
@@ -223,18 +186,14 @@ describe("atomic indexed GitHub writes", () => {
       expect.arrayContaining([
         "notes/2026/202609/20260914-atomic-note.md",
         "notes/2026/202609/images/20260914-atomic-note-1.png",
-        ".capture-reflect/index-v2/notes/2026.json",
-        ".capture-reflect/index-v2/manifest.json",
+        ".capture-reflect/index/notes/2026.json",
+        ".capture-reflect/index/manifest.json",
       ]),
     );
     expect(api.lastCommitPaths).not.toContain(".capture-reflect/README.md");
-    expect(api.indexWrites).toBe(0);
-
-    const writesBeforeWarmSearch = api.indexWrites;
     const matches = await store.searchRecords({ query: "atomic testing" });
 
     expect(matches).toHaveLength(1);
     expect(matches[0]?.path).toBe("notes/2026/202609/20260914-atomic-note.md");
-    expect(api.indexWrites).toBe(writesBeforeWarmSearch);
   });
 });

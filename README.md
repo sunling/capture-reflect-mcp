@@ -42,9 +42,9 @@ Capture routing follows the intended subject rather than isolated trigger words.
 
 ### Sharded GitHub search index
 
-GitHub-backed repositories use a v2 search index under `.capture-reflect/index-v2/`. The manifest references smaller shards grouped by record type and year; nonstandard legacy paths use deterministic hash buckets. Captures update only the affected shard and the manifest in the same atomic commit as the Markdown record and any images.
+GitHub-backed repositories use a sharded search index under `.capture-reflect/index/`. The manifest references smaller shards grouped by record type and year; nonstandard paths use deterministic hash buckets. Captures update only the affected shard and the manifest in the same atomic commit as the Markdown record and any images.
 
-When only `.capture-reflect/search-index-v1.json` exists, the next successful capture or search reuses its Bloom filters to create v2 without rereading every record body. The v1 file is retained during the compatibility period but is no longer updated after v2 exists. Search validates per-shard digests against the current Git tree and rebuilds stale shards from changed records. Markdown under `journals/`, `notes/`, and `reviews/` remains the source of truth; all `.capture-reflect/` data is rebuildable.
+The first search creates the index. Later searches validate per-shard digests against the current Git tree and rebuild stale metadata from changed records. Markdown under `journals/`, `notes/`, and `reviews/` remains the source of truth; all `.capture-reflect/` data is rebuildable.
 
 ### Bubble Breaker workflow
 

@@ -6,7 +6,7 @@ import {
   shardKeyForPath,
 } from "../src/storage/search-index.js";
 
-describe("search index v2 sharding", () => {
+describe("search index sharding", () => {
   it("groups dated records by type and year and hashes legacy paths", () => {
     expect(shardKeyForPath("journals/2026/202609/20260916-test.md"))
       .toBe("journals/2026");

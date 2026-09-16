@@ -24,8 +24,6 @@ class FakeGitHubSearchApi {
   indexWrites = 0;
   activeGraphql = 0;
   maxActiveGraphql = 0;
-  indexSha: string | undefined;
-  indexContent: string | undefined;
   headSha = "head-1";
   treeSha = "tree-1";
   #indexRevision = 0;
@@ -47,9 +45,6 @@ class FakeGitHubSearchApi {
         tree: [
           ...this.files.map((file) => ({ path: file.path, type: "blob", sha: file.sha })),
           ...[...this.metadata.values()].map((file) => ({ path: file.path, type: "blob", sha: file.sha })),
-          ...(this.indexSha
-            ? [{ path: ".capture-reflect/search-index-v1.json", type: "blob", sha: this.indexSha }]
-            : []),
         ],
       });
     }
@@ -65,34 +60,7 @@ class FakeGitHubSearchApi {
           content: Buffer.from(metadata.content, "utf8").toString("base64"),
         });
       }
-      if (!this.indexSha || sha !== this.indexSha || this.indexContent === undefined) {
-        return jsonResponse({ message: "Not found" }, 404);
-      }
-      return jsonResponse({
-        sha: this.indexSha,
-        encoding: "base64",
-        content: Buffer.from(this.indexContent, "utf8").toString("base64"),
-      });
-    }
-
-    if (
-      method === "PUT" &&
-      url.pathname.endsWith("/contents/.capture-reflect/search-index-v1.json")
-    ) {
-      this.indexWrites += 1;
-      const body = JSON.parse(init?.body as string) as {
-        content: string;
-        sha?: string;
-      };
-      if (this.indexSha && body.sha !== this.indexSha) {
-        return jsonResponse({ message: "SHA does not match" }, 409);
-      }
-      if (!this.indexSha && body.sha) {
-        return jsonResponse({ message: "File is missing" }, 422);
-      }
-      this.indexContent = Buffer.from(body.content, "base64").toString("utf8");
-      this.indexSha = `index-sha-${++this.#indexRevision}`;
-      return jsonResponse({ content: { sha: this.indexSha } }, body.sha ? 200 : 201);
+      return jsonResponse({ message: "Not found" }, 404);
     }
 
     if (method === "POST" && url.pathname === "/graphql") {
@@ -193,7 +161,7 @@ describe("indexed GitHub search", () => {
     expect(api.maxActiveGraphql).toBe(3);
     expect(api.indexWrites).toBe(1);
     expect(api.indexReads).toBe(0);
-    expect(api.metadata.get(".capture-reflect/index-v2/manifest.json")?.content)
+    expect(api.metadata.get(".capture-reflect/index/manifest.json")?.content)
       .not.toContain("needle appears here");
 
     const second = await store.searchRecords({ query: "needle" });

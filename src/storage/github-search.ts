@@ -10,9 +10,8 @@ import type {
 import {
   BLOOM_BYTES,
   BLOOM_HASH_COUNT,
-  SEARCH_INDEX_V1_PATH,
-  SEARCH_INDEX_V2_MANIFEST_PATH,
-  SEARCH_INDEX_V2_PREFIX,
+  SEARCH_INDEX_MANIFEST_PATH,
+  SEARCH_INDEX_PREFIX,
   SEARCH_METADATA_README,
   SEARCH_METADATA_README_PATH,
   bloomMayContain,
@@ -24,13 +23,12 @@ import {
   shardKeyForPath,
   shardPath,
   trigrams,
-  validSearchIndexManifestV2,
-  validSearchIndexShardV2,
-  validSearchIndexV1,
+  validSearchIndexManifest,
+  validSearchIndexShard,
   type GitHubRecordPath,
   type SearchIndexEntry,
-  type SearchIndexManifestV2,
-  type SearchIndexShardV2,
+  type SearchIndexManifest,
+  type SearchIndexShard,
 } from "./search-index.js";
 
 interface FastGitHubSearchOptions {
@@ -53,9 +51,8 @@ interface GitHubCommitLookup {
 
 interface SearchTreeSnapshot {
   records: GitHubRecordPath[];
-  indexV1Sha?: string;
-  manifestV2Sha?: string;
-  shardV2Shas: Map<string, string>;
+  manifestSha?: string;
+  shardShas: Map<string, string>;
 }
 
 interface GitHubGraphQlBlob {
@@ -180,22 +177,17 @@ class FastGitHubSearch {
       throw new Error("The GitHub repository tree is too large to search safely.");
     }
 
-    let indexV1Sha: string | undefined;
-    let manifestV2Sha: string | undefined;
-    const shardV2Shas = new Map<string, string>();
+    let manifestSha: string | undefined;
+    const shardShas = new Map<string, string>();
     const records: GitHubRecordPath[] = [];
     for (const item of tree.tree) {
       if (item.type !== "blob" || !item.path || !item.sha) continue;
-      if (item.path === SEARCH_INDEX_V1_PATH) {
-        indexV1Sha = item.sha;
+      if (item.path === SEARCH_INDEX_MANIFEST_PATH) {
+        manifestSha = item.sha;
         continue;
       }
-      if (item.path === SEARCH_INDEX_V2_MANIFEST_PATH) {
-        manifestV2Sha = item.sha;
-        continue;
-      }
-      if (item.path.startsWith(SEARCH_INDEX_V2_PREFIX) && item.path.endsWith(".json")) {
-        shardV2Shas.set(item.path, item.sha);
+      if (item.path.startsWith(SEARCH_INDEX_PREFIX) && item.path.endsWith(".json")) {
+        shardShas.set(item.path, item.sha);
         continue;
       }
       if (
@@ -209,9 +201,8 @@ class FastGitHubSearch {
     }
     return {
       records,
-      shardV2Shas,
-      ...(indexV1Sha ? { indexV1Sha } : {}),
-      ...(manifestV2Sha ? { manifestV2Sha } : {}),
+      shardShas,
+      ...(manifestSha ? { manifestSha } : {}),
     };
   }
 
@@ -222,19 +213,16 @@ class FastGitHubSearch {
     refreshed: Map<string, StoredRecord>;
   }> {
     let previous: Record<string, SearchIndexEntry> = {};
-    let currentV2 = false;
+    let current = false;
 
-    if (tree.manifestV2Sha) {
-      const manifest = await this.#loadManifestV2(tree.manifestV2Sha);
+    if (tree.manifestSha) {
+      const manifest = await this.#loadManifest(tree.manifestSha);
       if (manifest) {
-        const loaded = await this.#loadShardsV2(manifest, tree.shardV2Shas);
+        const loaded = await this.#loadShards(manifest, tree.shardShas);
         previous = loaded.entries;
-        currentV2 = loaded.complete && manifestMatchesRecords(manifest, tree.records);
-        if (currentV2) return { entries: previous, refreshed: new Map() };
+        current = loaded.complete && manifestMatchesRecords(manifest, tree.records);
+        if (current) return { entries: previous, refreshed: new Map() };
       }
-    } else if (tree.indexV1Sha) {
-      const indexV1 = await this.#loadIndexV1(tree.indexV1Sha);
-      previous = indexV1?.records ?? {};
     }
 
     const nextRecords: Record<string, SearchIndexEntry> = {};
@@ -262,44 +250,23 @@ class FastGitHubSearch {
     }
 
     const deletedCount = Object.keys(previous).length - (tree.records.length - changed.length);
-    if (!currentV2 || changed.length > 0 || deletedCount > 0) {
+    if (!current || changed.length > 0 || deletedCount > 0) {
       await this.#saveShardedIndex(buildShardedIndex(nextRecords));
     }
     return { entries: nextRecords, refreshed };
   }
 
-  async #loadIndexV1(sha: string) {
-    const response = await this.#fetch(
-      new URL(`repos/${this.#repositoryPath}/git/blobs/${encodeURIComponent(sha)}`, this.#apiBaseUrl),
-      {
-        method: "GET",
-        headers: this.#headers(),
-      },
-    );
-    if (!response.ok) return undefined;
-    const blob = (await response.json()) as GitHubBlob;
-    if (blob.encoding !== "base64" || blob.sha !== sha) return undefined;
-    try {
-      const parsed = JSON.parse(
-        Buffer.from(blob.content.replaceAll("\n", ""), "base64").toString("utf8"),
-      ) as unknown;
-      return validSearchIndexV1(parsed) ? parsed : undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  async #loadManifestV2(sha: string): Promise<SearchIndexManifestV2 | undefined> {
+  async #loadManifest(sha: string): Promise<SearchIndexManifest | undefined> {
     try {
       const parsed = JSON.parse(await this.#loadTextBlob(sha)) as unknown;
-      return validSearchIndexManifestV2(parsed) ? parsed : undefined;
+      return validSearchIndexManifest(parsed) ? parsed : undefined;
     } catch {
       return undefined;
     }
   }
 
-  async #loadShardsV2(
-    manifest: SearchIndexManifestV2,
+  async #loadShards(
+    manifest: SearchIndexManifest,
     available: Map<string, string>,
   ): Promise<{ entries: Record<string, SearchIndexEntry>; complete: boolean }> {
     const requested: GitHubRecordPath[] = [];
@@ -322,7 +289,7 @@ class FastGitHubSearch {
       }
       try {
         const parsed = JSON.parse(text) as unknown;
-        if (!validSearchIndexShardV2(parsed) || parsed.key !== key) {
+        if (!validSearchIndexShard(parsed) || parsed.key !== key) {
           complete = false;
           continue;
         }
@@ -356,8 +323,8 @@ class FastGitHubSearch {
   }
 
   async #saveShardedIndex(index: {
-    manifest: SearchIndexManifestV2;
-    shards: Map<string, SearchIndexShardV2>;
+    manifest: SearchIndexManifest;
+    shards: Map<string, SearchIndexShard>;
   }): Promise<void> {
     const commit = await this.#rest<GitHubCommitLookup>(
       `repos/${this.#repositoryPath}/commits/${encodeURIComponent(this.#branch)}`,
@@ -368,7 +335,7 @@ class FastGitHubSearch {
         contents: Buffer.from(JSON.stringify(shard), "utf8").toString("base64"),
       })),
       {
-        path: SEARCH_INDEX_V2_MANIFEST_PATH,
+        path: SEARCH_INDEX_MANIFEST_PATH,
         contents: Buffer.from(JSON.stringify(index.manifest), "utf8").toString("base64"),
       },
       {

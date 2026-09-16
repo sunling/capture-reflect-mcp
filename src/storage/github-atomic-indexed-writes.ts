@@ -21,25 +21,21 @@ import type {
 import {
   BLOOM_BYTES,
   BLOOM_HASH_COUNT,
-  SEARCH_INDEX_V1_PATH,
-  SEARCH_INDEX_V2_MANIFEST_PATH,
-  SEARCH_INDEX_V2_PREFIX,
-  SEARCH_INDEX_VERSION_V2,
+  SEARCH_INDEX_MANIFEST_PATH,
+  SEARCH_INDEX_PREFIX,
   SEARCH_METADATA_README,
   SEARCH_METADATA_README_PATH,
   buildBloom,
-  buildShardedIndex,
   gitBlobSha,
   manifestMatchesRecords,
   recordsDigest,
   shardKeyForPath,
   shardPath,
-  validSearchIndexManifestV2,
-  validSearchIndexShardV2,
-  validSearchIndexV1,
+  validSearchIndexManifest,
+  validSearchIndexShard,
   type GitHubRecordPath,
-  type SearchIndexManifestV2,
-  type SearchIndexShardV2,
+  type SearchIndexManifest,
+  type SearchIndexShard,
 } from "./search-index.js";
 
 interface AtomicIndexedWriteOptions {
@@ -76,9 +72,8 @@ interface WriteSnapshot {
   headSha: string;
   records: GitHubRecordPath[];
   paths: Set<string>;
-  indexV1Sha?: string;
-  manifestV2Sha?: string;
-  shardV2Shas: Map<string, string>;
+  manifestSha?: string;
+  shardShas: Map<string, string>;
 }
 
 interface CommitAddition {
@@ -270,18 +265,15 @@ class AtomicIndexedWriter {
 
     const paths = new Set<string>();
     const records: GitHubRecordPath[] = [];
-    const shardV2Shas = new Map<string, string>();
-    let indexV1Sha: string | undefined;
-    let manifestV2Sha: string | undefined;
+    const shardShas = new Map<string, string>();
+    let manifestSha: string | undefined;
     for (const item of tree.tree) {
       if (item.type !== "blob" || !item.path || !item.sha) continue;
       paths.add(item.path);
-      if (item.path === SEARCH_INDEX_V1_PATH) {
-        indexV1Sha = item.sha;
-      } else if (item.path === SEARCH_INDEX_V2_MANIFEST_PATH) {
-        manifestV2Sha = item.sha;
-      } else if (item.path.startsWith(SEARCH_INDEX_V2_PREFIX) && item.path.endsWith(".json")) {
-        shardV2Shas.set(item.path, item.sha);
+      if (item.path === SEARCH_INDEX_MANIFEST_PATH) {
+        manifestSha = item.sha;
+      } else if (item.path.startsWith(SEARCH_INDEX_PREFIX) && item.path.endsWith(".json")) {
+        shardShas.set(item.path, item.sha);
       } else if (
         item.path.endsWith(".md") &&
         (item.path.startsWith("journals/") ||
@@ -295,9 +287,8 @@ class AtomicIndexedWriter {
       headSha: commit.sha,
       records,
       paths,
-      shardV2Shas,
-      ...(indexV1Sha ? { indexV1Sha } : {}),
-      ...(manifestV2Sha ? { manifestV2Sha } : {}),
+      shardShas,
+      ...(manifestSha ? { manifestSha } : {}),
     };
   }
 
@@ -340,16 +331,16 @@ class AtomicIndexedWriter {
     additions: CommitAddition[],
   ): Promise<void> {
     const entry = { sha: gitBlobSha(content), bloom: buildBloom(content) };
-    if (snapshot.manifestV2Sha) {
-      const manifest = await this.#loadManifestV2(snapshot.manifestV2Sha);
+    if (snapshot.manifestSha) {
+      const manifest = await this.#loadManifest(snapshot.manifestSha);
       if (!manifest || !manifestMatchesRecords(manifest, snapshot.records)) return;
       const key = shardKeyForPath(recordPath);
       const metadata = manifest.shards[key];
-      const shardSha = metadata ? snapshot.shardV2Shas.get(metadata.path) : undefined;
-      let shard: SearchIndexShardV2;
+      const shardSha = metadata ? snapshot.shardShas.get(metadata.path) : undefined;
+      let shard: SearchIndexShard;
       if (metadata) {
         if (!shardSha) return;
-        const loaded = await this.#loadShardV2(shardSha, key);
+        const loaded = await this.#loadShard(shardSha, key);
         if (!loaded) return;
         const indexedRecords = Object.entries(loaded.records).map(([path, value]) => ({
           path,
@@ -363,17 +354,17 @@ class AtomicIndexedWriter {
         }
         shard = loaded;
       } else {
-        shard = this.#emptyShardV2(key);
+        shard = this.#emptyShard(key);
       }
 
-      const nextShard: SearchIndexShardV2 = {
+      const nextShard: SearchIndexShard = {
         ...shard,
         records: { ...shard.records, [recordPath]: entry },
       };
       const nextRecords = snapshot.records.filter(({ path }) => path !== recordPath);
       nextRecords.push({ path: recordPath, sha: entry.sha });
       const targetRecords = nextRecords.filter(({ path }) => shardKeyForPath(path) === key);
-      const nextManifest: SearchIndexManifestV2 = {
+      const nextManifest: SearchIndexManifest = {
         ...manifest,
         shards: {
           ...manifest.shards,
@@ -386,28 +377,12 @@ class AtomicIndexedWriter {
       };
       additions.push(
         this.#textAddition(shardPath(key), JSON.stringify(nextShard)),
-        this.#textAddition(SEARCH_INDEX_V2_MANIFEST_PATH, JSON.stringify(nextManifest)),
+        this.#textAddition(SEARCH_INDEX_MANIFEST_PATH, JSON.stringify(nextManifest)),
       );
       this.#addMetadataReadme(snapshot, additions);
       return;
     }
 
-    if (!snapshot.indexV1Sha) return;
-    const indexV1 = await this.#loadIndexV1(snapshot.indexV1Sha);
-    if (
-      !indexV1 ||
-      Object.keys(indexV1.records).length !== snapshot.records.length ||
-      !snapshot.records.every((record) => indexV1.records[record.path]?.sha === record.sha)
-    ) return;
-
-    const migrated = buildShardedIndex({ ...indexV1.records, [recordPath]: entry });
-    for (const [key, shard] of migrated.shards) {
-      additions.push(this.#textAddition(shardPath(key), JSON.stringify(shard)));
-    }
-    additions.push(
-      this.#textAddition(SEARCH_INDEX_V2_MANIFEST_PATH, JSON.stringify(migrated.manifest)),
-    );
-    this.#addMetadataReadme(snapshot, additions);
   }
 
   #addMetadataReadme(snapshot: WriteSnapshot, additions: CommitAddition[]): void {
@@ -416,9 +391,8 @@ class AtomicIndexedWriter {
     }
   }
 
-  #emptyShardV2(key: string): SearchIndexShardV2 {
+  #emptyShard(key: string): SearchIndexShard {
     return {
-      version: SEARCH_INDEX_VERSION_V2,
       bloomBytes: BLOOM_BYTES,
       hashCount: BLOOM_HASH_COUNT,
       key,
@@ -426,29 +400,19 @@ class AtomicIndexedWriter {
     };
   }
 
-  async #loadIndexV1(sha: string) {
+  async #loadManifest(sha: string): Promise<SearchIndexManifest | undefined> {
     try {
-      const text = await this.#loadTextBlob(sha);
-      const parsed = JSON.parse(text) as unknown;
-      return validSearchIndexV1(parsed) ? parsed : undefined;
+      const parsed = JSON.parse(await this.#loadTextBlob(sha)) as unknown;
+      return validSearchIndexManifest(parsed) ? parsed : undefined;
     } catch {
       return undefined;
     }
   }
 
-  async #loadManifestV2(sha: string): Promise<SearchIndexManifestV2 | undefined> {
+  async #loadShard(sha: string, key: string): Promise<SearchIndexShard | undefined> {
     try {
       const parsed = JSON.parse(await this.#loadTextBlob(sha)) as unknown;
-      return validSearchIndexManifestV2(parsed) ? parsed : undefined;
-    } catch {
-      return undefined;
-    }
-  }
-
-  async #loadShardV2(sha: string, key: string): Promise<SearchIndexShardV2 | undefined> {
-    try {
-      const parsed = JSON.parse(await this.#loadTextBlob(sha)) as unknown;
-      return validSearchIndexShardV2(parsed) && parsed.key === key ? parsed : undefined;
+      return validSearchIndexShard(parsed) && parsed.key === key ? parsed : undefined;
     } catch {
       return undefined;
     }
