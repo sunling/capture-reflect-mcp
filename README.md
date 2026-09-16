@@ -23,15 +23,30 @@ Before connecting Capture & Reflect, create a dedicated GitHub repository for yo
 
 An existing repository also works, and existing files are not replaced. A dedicated repository is recommended because it keeps personal records separate and limits the GitHub App's access to only the data it needs. Record Markdown and images are written directly to the selected repository; they are not copied into the hosted service's database.
 
+## Your records remain usable without this MCP
+
+**No MCP required. No ID required. No database required.** Markdown files, images, and ordinary relative Markdown links in *your records repository* are the durable assets. Capture & Reflect helps write and explore them; it is not required to keep using them.
+
+- **Keep writing normally.** If the hosted MCP stops working or is discontinued, clone or download the records repository, open it in Obsidian or another Markdown editor, and create/edit `.md` files. You do **not** have to generate an ID by hand or export a proprietary database. Use standard links such as `[related note](another-note.md)` to connect records.
+- **IDs are optional metadata.** Capture & Reflect assigns a stable `id: cr_<uuid>` in YAML frontmatter when it creates a new journal, note, or review; appending to an existing journal preserves its ID. Older files and hand-written Markdown without IDs remain valid. An ID does not replace the file path or make ordinary Markdown links immune to renaming.
+- **Links are the source of graph relationships.** The read-only `get_record_connections` tool accepts an exact repository-relative `path` or an optional `id` and derives outgoing links, backlinks, and unresolved targets from standard relative Markdown links in record bodies. It does not add reverse links to other files or maintain a graph database. It does not infer relationship types or treat a link as the user's endorsement of an AI suggestion.
+- **Reviews preserve evidence separately.** A review's `source_paths` lists the journal and note files consulted for the reviewed period. That is provenance, **not** an assertion that every record shares a meaningful idea. The review body can link specific records beside an observation and explain *why* they matter. The graph tool currently derives edges from body links, not from `source_paths`; no typed relationship schema is required.
+- **Indexes are disposable.** `.capture-reflect/` search metadata can be rebuilt from Markdown; graph connections are computed from files at query time. Removing an index never removes the original note or its links.
+
+Current limitations: graph lookup scans all discoverable records and may be slower for large repositories. The MCP record reader currently recognizes date-prefixed record filenames, so manually created files should follow `YYYYMMDD-title.md` under the canonical folders to be found by MCP search/graph tools; Obsidian and other editors do not require that convention. Standard relative links must be repaired if a file is moved or renamed by a tool that does not update references automatically. The graph parser supports common inline and reference-style Markdown links, not Obsidian-only `[[wikilinks]]` or every advanced Markdown syntax. No automatic backfill of old IDs, automatic AI relationship creation, or relationship-type taxonomy is implemented.
+
+See the [portable knowledge graph design and MCP outage walkthrough](docs/portable-knowledge-graph.md) for examples and the exact boundaries.
+
 ## Current scope
 
-The local server exposes six record and context tools. The hosted service also exposes secure setup and account-switch tools:
+The local server exposes seven record, graph, and context tools. The hosted service also exposes secure setup and account-switch tools:
 
 - `capture_journal`: create or append a personal journal entry fragment, with optional photos.
 - `capture_note`: save a Markdown note preserving the original text, with optional source, related journal entries, AI-labeled reflections, and photos.
 - `get_records_by_date_range`: retrieve journals and notes, or saved reviews with `types: ["review"]` (filtered by save date).
 - `save_review`: save a review and validated source links under `reviews/`, without overwriting.
 - `search_records`: search journals and notes by default; use `types: ["review"]` for earlier reviews.
+- `get_record_connections`: read standard Markdown outgoing links, backlinks, and unresolved targets by exact path or optional ID; does not write records.
 - `get_bubble_breaker_context`: read recent journals and notes, current date/time, and the Bubble Breaker workflow; defaults to the last seven calendar days in the configured time zone.
 - `get_github_setup_link`: authorize a GitHub App and choose a per-user records repository.
 - `get_github_account_switch_link`: open GitHub account selection directly, including when the old authorization has expired.
@@ -106,7 +121,7 @@ For GitHub account and repository selection before returning to ChatGPT, enable 
 
 ### Switch GitHub accounts with the original hosted-auth flow
 
-Ask “Switch the GitHub account for my records”. The client calls `get_github_account_switch_link` and returns a fresh link that opens GitHub’s account picker directly. Select or sign into the desired account, then choose a repository and click **Save & connect**. The general `get_github_setup_link` page also shows the current username and **Use a different GitHub account**. Grant the GitHub App access to that repository if needed.
+Ask “Switch the GitHub account for my records”. The client calls `get_github_account_switch_link` and returns a fresh link that opens GitHub's account picker directly. Select or sign into the desired account, then choose a repository and click **Save & connect**. The general `get_github_setup_link` page also shows the current username and **Use a different GitHub account**. Grant the GitHub App access to that repository if needed.
 
 Disconnecting the plugin in ChatGPT does not clear the server's saved GitHub connection. Account switching uses GitHub's account picker and does not require clearing browser cookies. The old connection remains until authorization succeeds; successful reauthorization clears the previous repository selection, so a repository must be selected before captures resume. Existing records stay in their original repository.
 
