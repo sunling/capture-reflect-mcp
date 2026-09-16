@@ -51,9 +51,7 @@ export async function prepareReview(store: RecordsStore, input: SaveReviewInput)
     `from: ${input.from}`, `to: ${input.to}`, "type: review", "source_paths:",
     ...sources.map((source) => `  - ${JSON.stringify(source)}`), "---",
   ].join("\n");
-  // Keep a linked source inventory even when the client uses localized/custom headings.
-  const links = sources.map((source) =>
-    `- [${source.replace(/[\[\]\\]/g, "\\$&")}](../../../${source.split("/").map(encodeURIComponent).join("/")})`,
-  ).join("\n");
-  return { path: reviewPath, content: `${metadata}\n\n${input.content.trim()}\n\n---\n\n${links}\n` };
+  // source_paths is the single complete inventory. The authored review carries only targeted inline citations.
+  // Do not append another full link list: it duplicates the inventory and disrupts reading.
+  return { path: reviewPath, content: `${metadata}\n\n${input.content.trim()}\n` };
 }
