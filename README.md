@@ -38,6 +38,14 @@ Before saving, the client starts with one focused `search_records` query restric
 
 This is a client workflow defined by the bundled skill and tool instructions. `capture_note` still accepts Markdown `content`; the storage layer does not automatically search, enforce sections, or rewrite existing notes.
 
+Capture routing follows the intended subject rather than isolated trigger words. Lived experiences and feelings go to `capture_journal`; technical observations, measurements, product tests, debugging findings, and design decisions go to `capture_note`, even when they discuss journals or the recording workflow itself. An explicit request to save something as a journal overrides the inferred subject.
+
+### Sharded GitHub search index
+
+GitHub-backed repositories use a sharded search index under `.capture-reflect/index/`. The manifest references smaller shards grouped by record type and year; nonstandard paths use deterministic hash buckets. Captures update only the affected shard and the manifest in the same atomic commit as the Markdown record and any images.
+
+The first search creates the index. Later searches validate per-shard digests against the current Git tree and rebuild stale metadata from changed records. Markdown under `journals/`, `notes/`, and `reviews/` remains the source of truth; all `.capture-reflect/` data is rebuildable.
+
 ### Bubble Breaker workflow
 
 Ask “Find one unfamiliar resource for me” or “帮我突破信息茧房，推荐一个陌生输入”. The client explores varied domains and sources with its own web tools, independently of inferred interests. Before recommending one verified resource, it uses `get_bubble_breaker_context` and focused `search_records` queries to filter familiar territory and repeats. History filters candidates; it does not determine every destination. The MCP does not browse or generate recommendations itself. Other modes are `challenge`, `blindspot`, `connect`, and `socratic`.
