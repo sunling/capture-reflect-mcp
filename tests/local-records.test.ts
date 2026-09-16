@@ -56,7 +56,7 @@ describe("LocalRecordsStore", () => {
     });
 
     expect(created.action).toBe("created");
-    expect(created.path).toBe("journals/2026/202608/20260824-咖啡店.md");
+    expect(created.path).toBe("journals/2026/202608/20260824-周一-咖啡店.md");
     expect(appended).toEqual({
       path: created.path,
       action: "appended",
@@ -90,6 +90,17 @@ describe("LocalRecordsStore", () => {
     expect(result.action).toBe("appended");
     expect(await fs.readdir(directory)).toEqual(["20260831-周一-walk.md"]);
     expect(await fs.readFile(path.join(root, legacyPath), "utf8")).toContain("Another thought.");
+  });
+
+  it("appends to a pre-change journal without renaming it", async () => {
+    const directory = path.join(root, "journals/2026/202609");
+    await fs.mkdir(directory, { recursive: true });
+    const oldPath = "journals/2026/202609/20260915-原来的文件.md";
+    await fs.writeFile(path.join(root, oldPath), "### Earlier\n\nEarlier entry.\n");
+    const result = await store.captureJournal({ date: "2026-09-15", title: "Later", keyword: "新标题", content: "New entry." });
+    expect(result).toMatchObject({ path: oldPath, action: "appended" });
+    expect(await fs.readdir(directory)).toEqual(["20260915-原来的文件.md"]);
+    expect(await fs.readFile(path.join(root, oldPath), "utf8")).toContain("New entry.");
   });
 
   it("stores an image beside a journal and inserts a relative Markdown link", async () => {
