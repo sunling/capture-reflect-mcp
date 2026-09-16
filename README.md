@@ -10,6 +10,19 @@ notes/{YYYY}/{YYYYMM}/
 reviews/
 ```
 
+## Hosted quick start
+
+Before connecting Capture & Reflect, create a dedicated GitHub repository for your records:
+
+1. On GitHub, create a new repository. A **private, empty repository** is recommended for personal records. You do not need to add a README, `.gitignore`, or license; Capture & Reflect can initialize a repository with no commits.
+2. Connect your AI client to `https://api.bysunling.com/mcp` and complete OAuth. See the [client-specific instructions](#connect-to-the-hosted-mcp) below.
+3. Ask the client to save a journal entry or note. On first use, open the secure GitHub setup link returned by Capture & Reflect.
+4. Authorize the Capture & Reflect GitHub App. For the narrowest access, choose **Only select repositories** and select the dedicated records repository.
+5. Choose that repository, confirm your time zone, and click **Save & connect**. Capture & Reflect creates the canonical `journals/`, `notes/`, and `reviews/` directories automatically.
+6. Try “帮我记录今天的日记”, “保存一条笔记”, or “搜索我以前关于搬家的记录”.
+
+An existing repository also works, and existing files are not replaced. A dedicated repository is recommended because it keeps personal records separate and limits the GitHub App's access to only the data it needs. Record Markdown and images are written directly to the selected repository; they are not copied into the hosted service's database.
+
 ## Current scope
 
 The local server exposes six record and context tools. The hosted service also exposes secure setup and account-switch tools:
