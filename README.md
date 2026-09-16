@@ -19,7 +19,7 @@ Before connecting Capture & Reflect, create a dedicated GitHub repository for yo
 3. Ask the client to save a journal entry or note. On first use, open the secure GitHub setup link returned by Capture & Reflect.
 4. Authorize the Capture & Reflect GitHub App. For the narrowest access, choose **Only select repositories** and select the dedicated records repository.
 5. Choose that repository, confirm your time zone, and click **Save & connect**. Capture & Reflect creates the canonical `journals/`, `notes/`, and `reviews/` directories automatically.
-6. Try “帮我记录今天的日记”, “保存一条笔记”, or “搜索我以前关于搬家的记录”.
+6. Try “Record today's journal entry”, “Save a note”, or “Search my past notes about moving”.
 
 An existing repository also works, and existing files are not replaced. A dedicated repository is recommended because it keeps personal records separate and limits the GitHub App's access to only the data it needs. Record Markdown and images are written directly to the selected repository; they are not copied into the hosted service's database.
 
@@ -33,7 +33,7 @@ An existing repository also works, and existing files are not replaced. A dedica
 - **Reviews preserve evidence separately.** A review's `source_paths` lists the journal and note files consulted for the reviewed period. That is provenance, **not** an assertion that every record shares a meaningful idea. The review body can link specific records beside an observation and explain *why* they matter. The graph tool currently derives edges from body links, not from `source_paths`; no typed relationship schema is required.
 - **Indexes are disposable.** `.capture-reflect/` search metadata can be rebuilt from Markdown; graph connections are computed from files at query time. Removing an index never removes the original note or its links.
 
-Current limitations: graph lookup scans all discoverable records and may be slower for large repositories. The MCP record reader currently recognizes date-prefixed record filenames, so manually created files should follow `YYYYMMDD-title.md` under the canonical folders to be found by MCP search/graph tools; Obsidian and other editors do not require that convention. Standard relative links must be repaired if a file is moved or renamed by a tool that does not update references automatically. The graph parser supports common inline and reference-style Markdown links, not Obsidian-only `[[wikilinks]]` or every advanced Markdown syntax. No automatic backfill of old IDs, automatic AI relationship creation, or relationship-type taxonomy is implemented.
+Current limitations: graph lookup scans all discoverable records and may be slower for large repositories. The MCP record reader currently recognizes date-prefixed record filenames, so manually created journals should follow `YYYYMMDD.md` and notes should follow `YYYYMMDD-short-topic.md` under the canonical folders to be found by MCP search/graph tools; older date-prefixed journal filenames remain supported. Obsidian and other editors do not require these conventions. Standard relative links must be repaired if a file is moved or renamed by a tool that does not update references automatically. The graph parser supports common inline and reference-style Markdown links, not Obsidian-only `[[wikilinks]]` or every advanced Markdown syntax. No automatic backfill of old IDs, automatic AI relationship creation, or relationship-type taxonomy is implemented.
 
 See the [portable knowledge graph design and MCP outage walkthrough](docs/portable-knowledge-graph.md) for examples and the exact boundaries.
 
@@ -76,7 +76,7 @@ The first search creates the index. Later searches validate per-shard digests ag
 
 ### Bubble Breaker workflow
 
-Ask “Find one unfamiliar resource for me” or “帮我突破信息茧房，推荐一个陌生输入”. The client explores varied domains and sources with its own web tools, independently of inferred interests. Before recommending one verified resource, it uses `get_bubble_breaker_context` and focused `search_records` queries to filter familiar territory and repeats. History filters candidates; it does not determine every destination. The MCP does not browse or generate recommendations itself. Other modes are `challenge`, `blindspot`, `connect`, and `socratic`.
+Ask “Find one unfamiliar resource for me” or “Help me discover a topic outside my usual interests”. The client explores varied domains and sources with its own web tools, independently of inferred interests. Before recommending one verified resource, it uses `get_bubble_breaker_context` and focused `search_records` queries to filter familiar territory and repeats. History filters candidates; it does not determine every destination. The MCP does not browse or generate recommendations itself. Other modes are `challenge`, `blindspot`, `connect`, and `socratic`.
 
 Recommendations stay in chat. Once you explicitly report completion, the client checks notes for an existing completion and saves a minimal record through `capture_note`, with `input` and `bubble-breaker` tags and no automatic journal enrichment or required summary. The configured time zone replaces the reference skill's fixed time zone. Search-based duplicate checks are not atomic; existing notes cannot be appended, so an explicitly requested repeat completion can be saved separately. Scheduling requires a supported client.
 
@@ -91,9 +91,9 @@ Recommendations stay in chat. Once you explicitly report completion, the client 
 
 The interface, tool names, and public metadata are English-first. Record content is multilingual: titles, Markdown bodies, source text, quotations, and filename keywords may use Unicode and keep the user's original language and code-switching. Capture tools do not translate unless the user explicitly asks. Recall and review responses follow the language of the current request while preserving source-language quotations.
 
-New journal filenames use `{YYYYMMDD}-{keyword}.md`, without a language-specific weekday. Existing journals retain their filenames and are still appended to by date. Filename keywords support Unicode letters, combining marks, and numbers. Image attachments accept an optional `alt` description in the user’s language, falling back to the filename stem or an empty description.
+New journal filenames use `{YYYYMMDD}.md` without a topic keyword or language-specific weekday. New note filenames retain `{YYYYMMDD}-{keyword}.md`; older journals keep their filenames and receive same-day appends. Filename keywords support Unicode letters, combining marks, and numbers. Image attachments accept an optional `alt` description in the user’s language, falling back to the filename stem or an empty description. See the [file naming guide](docs/file-naming.md).
 
-Examples include “记录一下今天发生的事”, “Save this reflection”, “今日のメモを保存して”, and mixed-language notes.
+Example requests include “Record what happened today”, “Save this reflection”, “Create a note about the book I just finished”, and “Summarize my last seven days”.
 
 ## Safety boundaries
 
@@ -144,7 +144,7 @@ In ChatGPT with Developer mode available:
 3. Use `https://api.bysunling.com/mcp` as the MCP URL, then complete OAuth and tool scanning.
 4. The first time you save a record, follow the GitHub setup link and choose your records repository.
 
-Once connected in either client, try: “帮我记录今天的日记”, “保存一条笔记”, “回看我最近七天的记录”, or “搜索我以前关于搬家的记录”.
+Once connected in either client, try: “Record today's journal entry”, “Save a note”, “Review my records from the last seven days”, or “Search my past notes about moving”.
 
 The same hosted MCP can be used by other AI clients that support remote MCP with OAuth.
 
@@ -209,7 +209,7 @@ http://127.0.0.1:3000/mcp
 
 Keep both `npm run start:http` and `tunnel-client run --profile <your-profile>` running. Then open **Settings → Security and login → Developer mode** in ChatGPT. On the [ChatGPT Plugins page](https://chatgpt.com/admin/plugins), create an app, choose **Tunnel**, and select or paste your `tunnel_id`. See the [Secure MCP Tunnel guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) for installing and initializing `tunnel-client`.
 
-Once connected, try: “帮我记录今天的日记”“把这张照片放进今天的日记”“保存一条笔记”“回看我最近七天的记录” or “搜索我以前关于搬家的记录”.
+Once connected, try: “Record today's journal entry”, “Add this photo to today's journal”, “Save a note”, “Review my records from the last seven days”, or “Search my past notes about moving”.
 
 ### ChatGPT plugin packaging
 
