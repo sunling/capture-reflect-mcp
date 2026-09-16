@@ -296,6 +296,22 @@ npm run check
 npm test
 ```
 
+Run the weekly review flow through the built HTTP server:
+
+```bash
+npm run test:e2e:review
+```
+
+This starts a separate server on a temporary localhost port and uses a scripted MCP client to initialize, capture test notes and a journal, read two date ranges, reproduce source-validation errors, save a corrected review, read it back, and verify overwrite protection. It checks HTTP 200 separately from MCP `isError`, verifies the saved Markdown on disk, and prints per-request timings. The test uses an isolated temporary records directory, does not load `.env`, and stops the server and removes test records afterward. It requires permission to bind a localhost port. It does not exercise AI generation, live GitHub, hosted authentication, or the Netlify runtime.
+
+To run the same HTTP checks with real GitHub records, authenticate `gh` with read access to the repository, then run:
+
+```bash
+npm run test:e2e:review -- --github sunling/sunling-os
+```
+
+This regression scenario reads journals and notes dated September 1–14, 2026 through `GitHubRecordsStore`, using September 8–14 as the reviewed period and September 1–7 as comparison material. It requires records in both periods. The script copies exact contents and paths into temporary local storage and verifies HTTP reads against the fetched contents. GitHub requests are restricted to reads; all review saves happen locally. It prints counts, sizes, and timings without printing real filenames or bodies on a successful test run. The review body is a test inventory, not an AI-generated personal review. No GitHub credential is passed to the local HTTP server.
+
 To inspect the tools interactively:
 
 ```bash

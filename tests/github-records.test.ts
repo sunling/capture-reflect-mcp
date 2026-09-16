@@ -126,6 +126,30 @@ function createStore(api: FakeGitHubApi): GitHubRecordsStore {
 }
 
 describe("GitHubRecordsStore", () => {
+  it("rejects mixed review ranges before writing, then saves the same body with exact in-range paths", async () => {
+    const api = new FakeGitHubApi();
+    const store = createStore(api);
+    await store.captureNote({ date: "2026-09-07", title: "Earlier", keyword: "earlier", content: "Earlier evidence." });
+    await store.captureNote({ date: "2026-09-10", title: "本周", keyword: "本周", content: "Current evidence." });
+    const previous = await store.getRecords({ from: "2026-09-01", to: "2026-09-07" });
+    const current = await store.getRecords({ from: "2026-09-08", to: "2026-09-14" });
+    const review = {
+      date: "2026-09-15", from: "2026-09-08", to: "2026-09-14",
+      title: "Weekly review", keyword: "weekly", content: "AI interpretation: this week has limited evidence.",
+      sourcePaths: [...current, ...previous].map((record) => record.path),
+    };
+    const before = { ...api.requests };
+    await expect(store.saveReview(review)).rejects.toThrow("Review source not found in the reviewed range");
+    expect(api.requests.tree - before.tree).toBe(1);
+    expect(api.requests.graphql - before.graphql).toBe(1);
+    expect(api.requests.contentsWrite - before.contentsWrite).toBe(0);
+    expect([...api.files.keys()].some((path) => path.startsWith("reviews/"))).toBe(false);
+
+    const saved = await store.saveReview({ ...review, sourcePaths: current.map((record) => record.path) });
+    expect(api.files.get(saved.path)?.content.toString()).toContain(review.content);
+    await expect(store.saveReview({ ...review, sourcePaths: current.map((record) => record.path) })).rejects.toThrow();
+  });
+
   it("saves linked reviews without mixing them into default reads or overwriting", async () => {
     const api = new FakeGitHubApi();
     const store = createStore(api);

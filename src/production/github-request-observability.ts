@@ -1,4 +1,5 @@
 import type { RecordsStore } from "../storage/records-store.js";
+import { ReviewSourceValidationError } from "../storage/reviews.js";
 
 type GitHubRequestCategory =
   | "tree"
@@ -145,9 +146,18 @@ function observedStoreMethod<T>(
   const before = tracker.snapshot();
   const startedAt = performance.now();
   let outcome: "success" | "error" = "success";
+  let failure: Record<string, unknown> | undefined;
   return action()
     .catch((error) => {
       outcome = "error";
+      // Paths, messages and stacks can contain personal record titles or upstream secrets.
+      // Log only known diagnostic fields; the caller still receives the original error.
+      failure = error instanceof ReviewSourceValidationError
+        ? {
+            code: error.code, stage: error.stage, from: error.from, to: error.to,
+            sourceCount: error.sourceCount, invalidSourceCount: error.invalidPaths.length,
+          }
+        : { code: "UNCLASSIFIED_ERROR" };
       throw error;
     })
     .finally(() => {
@@ -158,6 +168,7 @@ function observedStoreMethod<T>(
         JSON.stringify({
           operation,
           outcome,
+          ...(failure ? { error: failure } : {}),
           durationMs: Math.round(performance.now() - startedAt),
           githubMs: Math.round(after.durationMs - before.durationMs),
           requests,

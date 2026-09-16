@@ -18,7 +18,8 @@
     "start": "node dist/src/server.js",
     "start:stdio": "node dist/src/server.js",
     "start:http": "node dist/src/http.js",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:e2e:review": "npm run build && node scripts/review-http-e2e.mjs"
   },
   "engines": {
     "node": ">=22"

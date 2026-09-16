@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { GitHubRecordsStore } from "../src/storage/github-records.js";
+import { createGitHubRequestTracker, withGitHubRequestObservability } from "../src/production/github-request-observability.js";
 import { withAtomicIndexedGitHubWrites } from "../src/storage/github-atomic-indexed-writes.js";
 import { withFastGitHubSearch } from "../src/storage/github-search.js";
 import type { RecordsStore } from "../src/storage/records-store.js";
@@ -139,6 +141,39 @@ function createStore(api: FakeGitHubApi): RecordsStore {
 }
 
 describe("atomic indexed GitHub writes", () => {
+  it("reproduces pre-write source failures through the production store composition", async () => {
+    const api = new FakeGitHubApi();
+    const current = "notes/2026/202609/20260910-current.md";
+    const earlier = "notes/2026/202609/20260907-earlier.md";
+    api.addText(current, "Current evidence");
+    api.addText(earlier, "Earlier evidence");
+    const tracker = createGitHubRequestTracker(api.fetch);
+    const options = { repository: "sunling/records", token: "test-token", branch: "main", fetch: tracker.fetch };
+    const store = withGitHubRequestObservability(
+      withAtomicIndexedGitHubWrites(withFastGitHubSearch(new GitHubRecordsStore(options), options), options), tracker,
+    );
+    const input = { date: "2026-09-15", from: "2026-09-08", to: "2026-09-14", title: "Weekly", keyword: "weekly", content: "AI interpretation: limited evidence.", sourcePaths: [current, earlier] };
+    const log = vi.spyOn(console, "info").mockImplementation(() => undefined);
+    try {
+      await expect(store.saveReview(input)).rejects.toMatchObject({ code: "REVIEW_SOURCES_NOT_IN_RANGE", invalidPaths: [earlier] });
+      expect(JSON.parse(log.mock.calls[0]![1] as string)).toMatchObject({
+        operation: "save_review", outcome: "error", requests: 2,
+        byCategory: { tree: 1, graphql_read: 1, graphql_write: 0, contents_write: 0, other: 0 },
+        error: { code: "REVIEW_SOURCES_NOT_IN_RANGE", invalidSourceCount: 1 },
+      });
+      expect(api.commitMutations).toBe(0);
+      expect([...api.files.keys()]).toEqual([current, earlier]);
+      const result = await store.saveReview({ ...input, sourcePaths: [current] });
+      expect(api.commitMutations).toBe(1);
+      expect(api.files.get(result.path)?.bytes.toString()).toContain(input.content);
+      expect(JSON.parse(log.mock.calls[1]![1] as string)).toMatchObject({ outcome: "success" });
+      await expect(store.saveReview({ ...input, sourcePaths: [current], content: "replacement" })).rejects.toThrow("already exists");
+      expect(api.commitMutations).toBe(1);
+    } finally {
+      log.mockRestore();
+    }
+  });
+
   it("leaves initial index creation to the first search", async () => {
     const api = new FakeGitHubApi();
     const store = createStore(api);

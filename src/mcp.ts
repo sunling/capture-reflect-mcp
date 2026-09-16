@@ -260,7 +260,7 @@ export function createServer(
         title: z.string().trim().min(1),
         keyword: z.string().min(1).max(40).describe("Filename keyword; use a meaningful range or topic, with Unicode letters, numbers, underscores or hyphens"),
         content: z.string().trim().min(1).describe("Markdown review in the user's language. Label AI interpretations and keep actual user thoughts distinct. Cite source entries for observations. Do not fabricate patterns or thoughts."),
-        sourcePaths: z.array(z.string().min(1)).min(1).describe("Repository-relative paths of all journal entries and notes actually reviewed; not earlier review files. Stored as metadata and relative Markdown links."),
+        sourcePaths: z.array(z.string().min(1)).min(1).describe("Copy exact path values from journal/note records read within from/to. Do not reconstruct filenames or use Markdown-relative links. Keep out-of-range historical comparisons and earlier reviews as citations in content, not in sourcePaths. Stored as metadata and relative Markdown links."),
       }),
       outputSchema: z.object({ path: z.string(), action: z.literal("created") }),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
