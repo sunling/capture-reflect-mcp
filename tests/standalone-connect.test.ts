@@ -92,7 +92,10 @@ describe("Standalone connection flow", () => {
 
   it("rejects a tampered setup token before repository access or OAuth completion", async () => {
     const token = await createSetupToken(config, "user_existing", { externalAuthId: "ext_auth_test", email: "verified@example.com", githubUserId: 42 });
-    const tampered = `${token.slice(0, -1)}${token.endsWith("a") ? "b" : "a"}`;
+    const parts = token.split(".");
+    const signature = parts[2]!;
+    parts[2] = `${signature.startsWith("a") ? "b" : "a"}${signature.slice(1)}`;
+    const tampered = parts.join(".");
     const response = await setup(new Request("https://api.example.com/setup/repository", {
       method: "POST",
       body: new URLSearchParams({ token: tampered, github_user_id: "42", repository: JSON.stringify([1, "chosen-user/records", "main"]), timezone: "UTC" }),

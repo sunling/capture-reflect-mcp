@@ -17,6 +17,7 @@ function jsonResponse(value: unknown, status = 200): Response {
 
 class FakeGitHubSearchApi {
   readonly files: FakeRecordFile[] = [];
+  readonly metadata = new Map<string, FakeRecordFile>();
   treeRequests = 0;
   graphqlRequests = 0;
   indexReads = 0;
@@ -25,6 +26,8 @@ class FakeGitHubSearchApi {
   maxActiveGraphql = 0;
   indexSha: string | undefined;
   indexContent: string | undefined;
+  headSha = "head-1";
+  treeSha = "tree-1";
   #indexRevision = 0;
 
   readonly fetch: typeof globalThis.fetch = async (input, init) => {
@@ -33,12 +36,17 @@ class FakeGitHubSearchApi {
     );
     const method = (init?.method ?? "GET").toUpperCase();
 
+    if (method === "GET" && /\/repos\/sunling\/records\/commits\/main$/.test(url.pathname)) {
+      return jsonResponse({ sha: this.headSha, commit: { tree: { sha: this.treeSha } } });
+    }
+
     if (method === "GET" && url.pathname.includes("/git/trees/")) {
       this.treeRequests += 1;
       return jsonResponse({
         truncated: false,
         tree: [
           ...this.files.map((file) => ({ path: file.path, type: "blob", sha: file.sha })),
+          ...[...this.metadata.values()].map((file) => ({ path: file.path, type: "blob", sha: file.sha })),
           ...(this.indexSha
             ? [{ path: ".capture-reflect/search-index-v1.json", type: "blob", sha: this.indexSha }]
             : []),
@@ -49,6 +57,14 @@ class FakeGitHubSearchApi {
     if (method === "GET" && url.pathname.includes("/git/blobs/")) {
       this.indexReads += 1;
       const sha = decodeURIComponent(url.pathname.split("/").at(-1)!);
+      const metadata = [...this.metadata.values()].find((file) => file.sha === sha);
+      if (metadata) {
+        return jsonResponse({
+          sha,
+          encoding: "base64",
+          content: Buffer.from(metadata.content, "utf8").toString("base64"),
+        });
+      }
       if (!this.indexSha || sha !== this.indexSha || this.indexContent === undefined) {
         return jsonResponse({ message: "Not found" }, 404);
       }
@@ -86,13 +102,38 @@ class FakeGitHubSearchApi {
       try {
         await new Promise((resolve) => setTimeout(resolve, 5));
         const body = JSON.parse(init?.body as string) as {
-          variables: Record<string, string>;
+          query: string;
+          variables: Record<string, unknown>;
         };
+        if (body.query.includes("createCommitOnBranch")) {
+          this.indexWrites += 1;
+          const input = body.variables.input as {
+            expectedHeadOid: string;
+            fileChanges: { additions: Array<{ path: string; contents: string }> };
+          };
+          if (input.expectedHeadOid !== this.headSha) {
+            return jsonResponse({ errors: [{ message: "expected head oid does not match" }] });
+          }
+          for (const addition of input.fileChanges.additions) {
+            const content = Buffer.from(addition.contents, "base64").toString("utf8");
+            this.metadata.set(addition.path, {
+              path: addition.path,
+              sha: `metadata-${++this.#indexRevision}`,
+              content,
+            });
+          }
+          this.headSha = `head-${this.#indexRevision}`;
+          this.treeSha = `tree-${this.#indexRevision}`;
+          return jsonResponse({
+            data: { createCommitOnBranch: { commit: { oid: this.headSha } } },
+          });
+        }
         const repository: Record<string, { oid: string; text: string } | null> = {};
         for (const [key, oid] of Object.entries(body.variables)) {
-          if (!key.startsWith("oid")) continue;
+          if (!key.startsWith("oid") || typeof oid !== "string") continue;
           const index = key.slice("oid".length);
-          const file = this.files.find((candidate) => candidate.sha === oid);
+          const file = [...this.files, ...this.metadata.values()]
+            .find((candidate) => candidate.sha === oid);
           repository[`blob${index}`] = file ? { oid, text: file.content } : null;
         }
         return jsonResponse({ data: { repository } });
@@ -148,11 +189,12 @@ describe("indexed GitHub search", () => {
     expect(first).toHaveLength(1);
     expect(first[0]?.path).toBe("notes/2026/202609/20260901-note-0274.md");
     expect(api.treeRequests).toBe(1);
-    expect(api.graphqlRequests).toBe(3);
+    expect(api.graphqlRequests).toBe(4);
     expect(api.maxActiveGraphql).toBe(3);
     expect(api.indexWrites).toBe(1);
     expect(api.indexReads).toBe(0);
-    expect(api.indexContent).not.toContain("needle appears here");
+    expect(api.metadata.get(".capture-reflect/index-v2/manifest.json")?.content)
+      .not.toContain("needle appears here");
 
     const second = await store.searchRecords({ query: "needle" });
 
@@ -160,7 +202,7 @@ describe("indexed GitHub search", () => {
     expect(api.treeRequests).toBe(2);
     expect(api.indexReads).toBe(1);
     expect(api.indexWrites).toBe(1);
-    expect(api.graphqlRequests).toBe(4);
+    expect(api.graphqlRequests).toBe(6);
   });
 
   it("self-heals only changed records by comparing blob SHAs", async () => {
@@ -182,7 +224,7 @@ describe("indexed GitHub search", () => {
 
     expect(matches).toHaveLength(1);
     expect(matches[0]?.path).toBe("notes/2026/202609/20260901-note-0274.md");
-    expect(api.graphqlRequests - graphqlAfterBuild).toBe(1);
+    expect(api.graphqlRequests - graphqlAfterBuild).toBe(3);
     expect(api.indexWrites - writesAfterBuild).toBe(1);
     expect(api.indexReads).toBe(1);
   });
@@ -199,6 +241,6 @@ describe("indexed GitHub search", () => {
 
     expect(matches).toHaveLength(1);
     expect(matches[0]?.path).toBe("notes/2026/202609/20260901-note-0274.md");
-    expect(api.graphqlRequests - graphqlAfterBuild).toBe(3);
+    expect(api.graphqlRequests - graphqlAfterBuild).toBe(4);
   });
 });

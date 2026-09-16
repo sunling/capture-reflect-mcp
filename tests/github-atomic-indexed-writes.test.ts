@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { withAtomicIndexedGitHubWrites } from "../src/storage/github-atomic-indexed-writes.js";
 import { withFastGitHubSearch } from "../src/storage/github-search.js";
+import { buildBloom } from "../src/storage/search-index.js";
 import type { RecordsStore } from "../src/storage/records-store.js";
 
 interface FakeFile {
@@ -157,13 +158,46 @@ function createStore(api: FakeGitHubApi): RecordsStore {
 }
 
 describe("atomic indexed GitHub writes", () => {
+  it("migrates a current v1 index to v2 during capture", async () => {
+    const api = new FakeGitHubApi();
+    const oldPath = "notes/2025/202501/20250101-old.md";
+    api.addText(oldPath, "old searchable content");
+    const oldSha = api.files.get(oldPath)!.sha;
+    api.addText(".capture-reflect/search-index-v1.json", JSON.stringify({
+      version: 1,
+      bloomBytes: 512,
+      hashCount: 4,
+      records: {
+        [oldPath]: { sha: oldSha, bloom: buildBloom("old searchable content") },
+      },
+    }));
+    const store = createStore(api);
+
+    await store.captureNote({
+      date: "2026-09-16",
+      title: "New note",
+      keyword: "new-note",
+      content: "new content",
+    });
+
+    expect(api.commitMutations).toBe(1);
+    expect(api.lastCommitPaths).toEqual(expect.arrayContaining([
+      ".capture-reflect/README.md",
+      ".capture-reflect/index-v2/notes/2025.json",
+      ".capture-reflect/index-v2/notes/2026.json",
+      ".capture-reflect/index-v2/manifest.json",
+      "notes/2026/202609/20260916-new-note.md",
+    ]));
+    expect(api.lastCommitPaths).not.toContain(".capture-reflect/search-index-v1.json");
+  });
+
   it("commits note, attachment, and a fresh search index together", async () => {
     const api = new FakeGitHubApi();
     api.addText("notes/2026/202609/20260901-old.md", "old searchable content");
     const store = createStore(api);
 
     await store.searchRecords({ query: "old searchable" });
-    expect(api.indexWrites).toBe(1);
+    expect(api.commitMutations).toBe(1);
 
     const result = await store.captureNote({
       date: "2026-09-14",
@@ -184,16 +218,17 @@ describe("atomic indexed GitHub writes", () => {
     expect(result.recordUrl).toBe(
       "https://github.com/sunling/records/blob/main/notes/2026/202609/20260914-atomic-note.md",
     );
-    expect(api.commitMutations).toBe(1);
+    expect(api.commitMutations).toBe(2);
     expect(api.lastCommitPaths).toEqual(
       expect.arrayContaining([
         "notes/2026/202609/20260914-atomic-note.md",
         "notes/2026/202609/images/20260914-atomic-note-1.png",
-        ".capture-reflect/search-index-v1.json",
-        ".capture-reflect/README.md",
+        ".capture-reflect/index-v2/notes/2026.json",
+        ".capture-reflect/index-v2/manifest.json",
       ]),
     );
-    expect(api.indexWrites).toBe(1);
+    expect(api.lastCommitPaths).not.toContain(".capture-reflect/README.md");
+    expect(api.indexWrites).toBe(0);
 
     const writesBeforeWarmSearch = api.indexWrites;
     const matches = await store.searchRecords({ query: "atomic testing" });

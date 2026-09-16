@@ -38,6 +38,14 @@ Before saving, the client starts with one focused `search_records` query restric
 
 This is a client workflow defined by the bundled skill and tool instructions. `capture_note` still accepts Markdown `content`; the storage layer does not automatically search, enforce sections, or rewrite existing notes.
 
+Capture routing follows the intended subject rather than isolated trigger words. Lived experiences and feelings go to `capture_journal`; technical observations, measurements, product tests, debugging findings, and design decisions go to `capture_note`, even when they discuss journals or the recording workflow itself. An explicit request to save something as a journal overrides the inferred subject.
+
+### Sharded GitHub search index
+
+GitHub-backed repositories use a v2 search index under `.capture-reflect/index-v2/`. The manifest references smaller shards grouped by record type and year; nonstandard legacy paths use deterministic hash buckets. Captures update only the affected shard and the manifest in the same atomic commit as the Markdown record and any images.
+
+When only `.capture-reflect/search-index-v1.json` exists, the next successful capture or search reuses its Bloom filters to create v2 without rereading every record body. The v1 file is retained during the compatibility period but is no longer updated after v2 exists. Search validates per-shard digests against the current Git tree and rebuilds stale shards from changed records. Markdown under `journals/`, `notes/`, and `reviews/` remains the source of truth; all `.capture-reflect/` data is rebuildable.
+
 ### Bubble Breaker workflow
 
 Ask “Find one unfamiliar resource for me” or “帮我突破信息茧房，推荐一个陌生输入”. The client explores varied domains and sources with its own web tools, independently of inferred interests. Before recommending one verified resource, it uses `get_bubble_breaker_context` and focused `search_records` queries to filter familiar territory and repeats. History filters candidates; it does not determine every destination. The MCP does not browse or generate recommendations itself. Other modes are `challenge`, `blindspot`, `connect`, and `socratic`.
