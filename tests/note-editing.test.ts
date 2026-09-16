@@ -49,8 +49,8 @@ describe("note editing guardrails", () => {
     const content = await fs.readFile(path.join(root, created.path), "utf8");
     expect(content).toContain("## 原始笔记\n\n第一次记录。");
     expect(content).toContain("沉香与木炭的故事。");
+    expect(content).not.toContain("\n木炭的故事。\n");
     expect(await store.searchRecords({ query: "沉香与木炭" })).toHaveLength(1);
-    expect(await store.searchRecords({ query: "木炭的故事。" })).toHaveLength(0);
     expect(await fs.readdir(path.join(root, "notes/2026/202609"))).toEqual(["20260916-沉香.md"]);
   });
 });
