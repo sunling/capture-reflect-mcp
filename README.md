@@ -19,7 +19,7 @@ Before connecting Capture & Reflect, create a dedicated GitHub repository for yo
 3. Ask the client to save a journal entry or note. On first use, open the secure GitHub setup link returned by Capture & Reflect.
 4. Authorize the Capture & Reflect GitHub App. For the narrowest access, choose **Only select repositories** and select the dedicated records repository.
 5. Choose that repository, confirm your time zone, and click **Save & connect**. Capture & Reflect creates the canonical `journals/`, `notes/`, and `reviews/` directories automatically.
-6. Try “Record today's journal entry”, “Save a note”, or “Search my past notes about moving”.
+6. Try “Dear diary, today...”, “Save this thought: ...”, or “What did I write about moving?”
 
 An existing repository also works, and existing files are not replaced. A dedicated repository is recommended because it keeps personal records separate and limits the GitHub App's access to only the data it needs. Record Markdown and images are written directly to the selected repository; they are not copied into the hosted service's database.
 
@@ -76,7 +76,7 @@ The first search creates the index. Later searches validate per-shard digests ag
 
 ### Bubble Breaker workflow
 
-Ask “Find one unfamiliar resource for me” or “Help me discover a topic outside my usual interests”. The client explores varied domains and sources with its own web tools, independently of inferred interests. Before recommending one verified resource, it uses `get_bubble_breaker_context` and focused `search_records` queries to filter familiar territory and repeats. History filters candidates; it does not determine every destination. The MCP does not browse or generate recommendations itself. Other modes are `challenge`, `blindspot`, `connect`, and `socratic`.
+Ask “Surprise me with something new.” The client explores varied domains and sources with its own web tools, independently of inferred interests. Before recommending one verified resource, it uses `get_bubble_breaker_context` and focused `search_records` queries to filter familiar territory and repeats. History filters candidates; it does not determine every destination. The MCP does not browse or generate recommendations itself. Other modes are `challenge`, `blindspot`, `connect`, and `socratic`.
 
 Recommendations stay in chat. Once you explicitly report completion, the client checks notes for an existing completion and saves a minimal record through `capture_note`, with `input` and `bubble-breaker` tags and no automatic journal enrichment or required summary. The configured time zone replaces the reference skill's fixed time zone. Search-based duplicate checks are not atomic; existing notes cannot be appended, so an explicitly requested repeat completion can be saved separately. Scheduling requires a supported client.
 
@@ -93,7 +93,7 @@ The interface, tool names, and public metadata are English-first. Record content
 
 New journal filenames use `{YYYYMMDD}.md` without a topic keyword or language-specific weekday. New note filenames retain `{YYYYMMDD}-{keyword}.md`; older journals keep their filenames and receive same-day appends. Filename keywords support Unicode letters, combining marks, and numbers. Image attachments accept an optional `alt` description in the user’s language, falling back to the filename stem or an empty description. See the [file naming guide](docs/file-naming.md).
 
-Example requests include “Record what happened today”, “Save this reflection”, “Create a note about the book I just finished”, and “Summarize my last seven days”.
+Example requests include “Dear diary, today...”, “Save this thought: ...”, “What stood out this week?”, and “What did I write about moving?” These are English examples, not a requirement to write records in English.
 
 ## Safety boundaries
 
@@ -144,7 +144,7 @@ In ChatGPT with Developer mode available:
 3. Use `https://api.bysunling.com/mcp` as the MCP URL, then complete OAuth and tool scanning.
 4. The first time you save a record, follow the GitHub setup link and choose your records repository.
 
-Once connected in either client, try: “Record today's journal entry”, “Save a note”, “Review my records from the last seven days”, or “Search my past notes about moving”.
+Once connected in either client, try: “Dear diary, today...”, “Save this thought: ...”, “What stood out this week?”, or “What did I write about moving?”
 
 The same hosted MCP can be used by other AI clients that support remote MCP with OAuth.
 
@@ -209,7 +209,7 @@ http://127.0.0.1:3000/mcp
 
 Keep both `npm run start:http` and `tunnel-client run --profile <your-profile>` running. Then open **Settings → Security and login → Developer mode** in ChatGPT. On the [ChatGPT Plugins page](https://chatgpt.com/admin/plugins), create an app, choose **Tunnel**, and select or paste your `tunnel_id`. See the [Secure MCP Tunnel guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels) for installing and initializing `tunnel-client`.
 
-Once connected, try: “Record today's journal entry”, “Add this photo to today's journal”, “Save a note”, “Review my records from the last seven days”, or “Search my past notes about moving”.
+Once connected, try: “Dear diary, today...”, “Add this photo to today's diary”, “Save this thought: ...”, “What stood out this week?”, or “What did I write about moving?”
 
 ### ChatGPT plugin packaging
 
