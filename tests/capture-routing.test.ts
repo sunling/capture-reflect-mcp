@@ -34,7 +34,7 @@ describe("capture routing metadata", () => {
       const note = listing.tools.find((tool: any) => tool.name === "capture_note");
       const update = listing.tools.find((tool: any) => tool.name === "update_record");
       expect(journal.description).toContain("not technical debugging");
-      expect(journal.description).toContain("automatically");
+      expect(journal.description).toContain("Automatically");
       expect(note.description).toContain("recording system");
       expect(update.description).toContain("journal or note");
       expect(update.inputSchema.properties.mode.enum).toEqual(["append", "replace"]);
