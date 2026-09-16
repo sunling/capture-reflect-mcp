@@ -26,8 +26,9 @@ export async function recordsStoreForUser(
   config: ProductionConfig,
   connections: ConnectionStore,
   userId: string,
+  existingConnection?: UserConnection,
 ): Promise<{ store: RecordsStore; connection: UserConnection }> {
-  let connection = await connections.get(userId);
+  let connection = existingConnection ?? await connections.get(userId);
   if (!connection?.repository || !connection.installationId) {
     throw new Error("GitHub is not connected. Run get_github_setup_link first.");
   }

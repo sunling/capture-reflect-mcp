@@ -34,7 +34,7 @@ The MCP server handles access and storage. It publishes four focused Agent Skill
 
 The capture skill keeps the user's text verbatim in an **Original note** section. **Source**, **Related journal entries**, and **Further reflection** are optional, with headings in the note's language. Any AI-generated connections or reflections are labeled separately from the original text.
 
-Before saving, the client runs up to three focused `search_records` queries restricted to journals, reads the results, and includes up to three meaningful connections with dates, relative file links, and exact excerpts. Search currently matches literal text; it may miss related experiences expressed differently. Empty sections are omitted, and a failed lookup does not prevent saving the original note. Users can request another format or skip enrichment.
+Before saving, the client starts with one focused `search_records` query restricted to journals and only runs another when the first result is clearly insufficient, with at most three searches total. It reads the results and includes up to three meaningful connections with dates, relative file links, and exact excerpts. Search currently matches literal text; it may miss related experiences expressed differently. Empty sections are omitted, and a failed lookup does not prevent saving the original note. Users can request another format or skip enrichment.
 
 This is a client workflow defined by the bundled skill and tool instructions. `capture_note` still accepts Markdown `content`; the storage layer does not automatically search, enforce sections, or rewrite existing notes.
 

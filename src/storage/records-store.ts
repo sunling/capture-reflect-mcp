@@ -18,6 +18,7 @@ export interface CaptureResult {
   path: string;
   action: "created" | "appended";
   attachmentPaths: string[];
+  recordUrl?: string;
 }
 
 export interface CaptureJournalInput {

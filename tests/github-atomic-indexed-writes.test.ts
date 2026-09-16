@@ -181,12 +181,16 @@ describe("atomic indexed GitHub writes", () => {
     });
 
     expect(result.action).toBe("created");
+    expect(result.recordUrl).toBe(
+      "https://github.com/sunling/records/blob/main/notes/2026/202609/20260914-atomic-note.md",
+    );
     expect(api.commitMutations).toBe(1);
     expect(api.lastCommitPaths).toEqual(
       expect.arrayContaining([
         "notes/2026/202609/20260914-atomic-note.md",
         "notes/2026/202609/images/20260914-atomic-note-1.png",
         ".capture-reflect/search-index-v1.json",
+        ".capture-reflect/README.md",
       ]),
     );
     expect(api.indexWrites).toBe(1);

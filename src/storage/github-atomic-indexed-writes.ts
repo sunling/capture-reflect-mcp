@@ -80,6 +80,15 @@ interface CommitAddition {
 }
 
 const SEARCH_INDEX_PATH = ".capture-reflect/search-index-v1.json";
+const SEARCH_METADATA_README_PATH = ".capture-reflect/README.md";
+const SEARCH_METADATA_README = `# Capture & Reflect metadata
+
+This folder is managed by Capture & Reflect. Your Markdown files under \`journals/\`, \`notes/\`, and \`reviews/\` remain the source of truth.
+
+\`search-index-v1.json\` contains record paths, Git blob SHAs, and Bloom filters that make private-repository search faster. It does not contain a second copy of your journal or note text.
+
+Do not edit this folder manually. It is safe to delete the search index if necessary; a later search can rebuild it from the Markdown records.
+`;
 const SEARCH_INDEX_VERSION = 1 as const;
 const BLOOM_BYTES = 512;
 const BLOOM_BITS = BLOOM_BYTES * 8;
@@ -234,6 +243,7 @@ class AtomicIndexedWriter {
           path: filePath,
           action: "created",
           attachmentPaths: attachments.stored.map((attachment) => attachment.path),
+          recordUrl: this.#recordUrl(filePath),
         };
       } catch (error) {
         if (!(error instanceof GitHubCommitConflictError) || attempt === WRITE_RETRIES - 1) {
@@ -296,6 +306,7 @@ class AtomicIndexedWriter {
           path: filePath,
           action: existingRecord ? "appended" : "created",
           attachmentPaths: attachments.stored.map((attachment) => attachment.path),
+          recordUrl: this.#recordUrl(filePath),
         };
       } catch (error) {
         if (!(error instanceof GitHubCommitConflictError) || attempt === WRITE_RETRIES - 1) {
@@ -406,6 +417,9 @@ class AtomicIndexedWriter {
     additions: CommitAddition[],
   ): Promise<void> {
     if (!snapshot.indexSha) return;
+    if (!snapshot.paths.has(SEARCH_METADATA_README_PATH)) {
+      additions.push(this.#textAddition(SEARCH_METADATA_README_PATH, SEARCH_METADATA_README));
+    }
     const index = await this.#loadIndex(snapshot.indexSha);
     if (!index || !indexIsCurrent(index, snapshot.records)) return;
 
@@ -444,6 +458,11 @@ class AtomicIndexedWriter {
 
   #textAddition(path: string, content: string): CommitAddition {
     return { path, contents: Buffer.from(content, "utf8").toString("base64") };
+  }
+
+  #recordUrl(path: string): string {
+    const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+    return `https://github.com/${this.#repository}/blob/${encodeURIComponent(this.#branch)}/${encodedPath}`;
   }
 
   async #commitAdditions(

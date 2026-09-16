@@ -37,7 +37,7 @@ describe("GitHub request observability", () => {
       method: "POST",
     });
 
-    expect(tracker.snapshot()).toEqual({
+    expect(tracker.snapshot()).toMatchObject({
       total: 4,
       byCategory: {
         tree: 1,
@@ -54,6 +54,7 @@ describe("GitHub request observability", () => {
         resource: "core",
       },
     });
+    expect(tracker.snapshot().durationMs).toBeGreaterThanOrEqual(0);
   });
 
   it("logs the request delta for one high-level records operation", async () => {
@@ -99,6 +100,8 @@ describe("GitHub request observability", () => {
           resource: "core",
         },
       });
+      expect(payload.durationMs).toEqual(expect.any(Number));
+      expect(payload.githubMs).toEqual(expect.any(Number));
     } finally {
       log.mockRestore();
     }

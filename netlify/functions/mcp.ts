@@ -17,7 +17,9 @@ const mcp = createMcpHandler(async ({ authInfo }) => {
   // those signed legacy subjects so already-connected clients keep working.
   const userId = await connectionUserIdForSubject(connections, subject);
   const connection = await connections.get(userId);
-  const store = lazyRecordsStore(async () => (await recordsStoreForUser(runtime, connections, userId)).store);
+  const store = lazyRecordsStore(async () => (
+    await recordsStoreForUser(runtime, connections, userId, connection)
+  ).store);
   return createServer(store, connection?.timeZone, {
     status: async () => ({
       connected: Boolean(connection?.repository && connection.installationId),
@@ -29,12 +31,35 @@ const mcp = createMcpHandler(async ({ authInfo }) => {
 }, { legacy: "stateless", onerror: (error) => console.error(error) });
 
 export default async (request: Request): Promise<Response> => {
-  if (request.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: { allow: "POST, GET, DELETE, OPTIONS" } });
+  const startedAt = performance.now();
+  let status = 500;
+  try {
+    if (request.method === "OPTIONS") {
+      const response = new Response(null, {
+        status: 204,
+        headers: { allow: "POST, GET, DELETE, OPTIONS" },
+      });
+      status = response.status;
+      return response;
+    }
+    const auth = await authenticateRequest(request, runtime);
+    if (auth instanceof Response) {
+      status = auth.status;
+      return auth;
+    }
+    const response = await mcp.fetch(request, { authInfo: auth.authInfo });
+    status = response.status;
+    return response;
+  } finally {
+    console.info(
+      "[capture-reflect][mcp-request]",
+      JSON.stringify({
+        outcome: status < 400 ? "success" : "error",
+        status,
+        durationMs: Math.round(performance.now() - startedAt),
+      }),
+    );
   }
-  const auth = await authenticateRequest(request, runtime);
-  if (auth instanceof Response) return auth;
-  return mcp.fetch(request, { authInfo: auth.authInfo });
 };
 
 export const config: Config = { path: "/mcp" };

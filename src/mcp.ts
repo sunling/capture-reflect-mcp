@@ -1,6 +1,5 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
-import { downloadImageAttachments } from "./attachments.js";
 import { getBubbleBreakerContext } from "./bubble-breaker.js";
 import { loadSkillCatalog, registerSkills } from "./skill-catalog.js";
 import type { RecordsStore } from "./storage/records-store.js";
@@ -11,6 +10,7 @@ const captureResultSchema = z.object({
   path: z.string(),
   action: z.enum(["created", "appended"]),
   attachmentPaths: z.array(z.string()),
+  recordUrl: z.string().url().optional(),
 });
 
 const fileParamSchema = z.object({
@@ -61,7 +61,7 @@ export function createServer(
     { name: "capture-reflect", version: "0.6.0" },
     {
       instructions:
-        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not attribute conclusions to the user that they did not express. For note capture, keep the original note verbatim and place any AI-generated connections or reflections in separate, explicitly labeled sections as described by capture_note and the capture-record skill. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. Use read tools before reviews or questions about prior records. Follow review-records and finish a requested review with save_review unless the user asks for chat-only output. Read earlier reviews only as interpretations to check against original records, not as independent evidence. When the user asks to switch GitHub accounts, call get_github_account_switch_link. For initial setup, repository changes, or time-zone updates, call get_github_setup_link and give them its setupUrl; the AI client's own reconnect action does not replace this setup flow.",
+        "Use capture_journal when the user asks to record their lived experience or feelings. Use capture_note for material they encountered, learned, quoted, collected, or want to remember, including ideas prompted by an external source. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not attribute conclusions to the user that they did not express. For note capture, keep the original note verbatim and place any AI-generated connections or reflections in separate, explicitly labeled sections as described by capture_note and the capture-record skill. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. After a successful capture, present recordUrl as a clickable Markdown link when it is returned. Use read tools before reviews or questions about prior records. Follow review-records and finish a requested review with save_review unless the user asks for chat-only output. Read earlier reviews only as interpretations to check against original records, not as independent evidence. When the user asks to switch GitHub accounts, call get_github_account_switch_link. For initial setup, repository changes, or time-zone updates, call get_github_setup_link and give them its setupUrl; the AI client's own reconnect action does not replace this setup flow.",
     },
   );
 
@@ -171,7 +171,9 @@ export function createServer(
       },
     },
     async ({ date, title, keyword, content, attachments }) => {
-      const images = await downloadImageAttachments(attachments ?? []);
+      const images = attachments?.length
+        ? await (await import("./attachments.js")).downloadImageAttachments(attachments)
+        : [];
       return toolResult({
         ...(await store.captureJournal({
           date: date ?? currentDate(timeZone),
@@ -189,7 +191,7 @@ export function createServer(
     {
       title: "Save a note",
       description:
-        "Save a note in any language when the user asks to keep an article, book, podcast, video, course, conversation, quotation, link, something they learned, or an idea prompted by outside material. Follow the capture-record skill: preserve the original note verbatim under Original note, with optional Source, Related journal entries, and Further reflection sections, using headings in the note's language. Before saving, unless the user asks to skip enrichment, use up to three focused search_records queries with types: ['journal']; read returned content and include at most three meaningful connections with dates, relative file links, exact excerpts, and explanations labeled Possible connection (AI). Label further AI reflections explicitly and never attribute them to the user. Omit empty optional sections. If lookup fails, still save the original and disclose the lookup failure. Respect an explicitly requested format. This tool stores the supplied Markdown; it does not search or structure it automatically.",
+        "Save a note in any language when the user asks to keep an article, book, podcast, video, course, conversation, quotation, link, something they learned, or an idea prompted by outside material. Follow the capture-record skill: preserve the original note verbatim under Original note, with optional Source, Related journal entries, and Further reflection sections, using headings in the note's language. Before saving, unless the user asks to skip enrichment, start with one focused search_records query using types: ['journal']; only make another focused search when the first result is clearly insufficient, with at most three searches total. Read returned content and include at most three meaningful connections with dates, relative file links, exact excerpts, and explanations labeled Possible connection (AI). Label further AI reflections explicitly and never attribute them to the user. Omit empty optional sections. If lookup fails, still save the original and disclose the lookup failure. Respect an explicitly requested format. This tool stores the supplied Markdown; it does not search or structure it automatically. After saving, present recordUrl as a clickable Markdown link when it is returned.",
       inputSchema: z.object({
         date: z
           .string()
@@ -219,6 +221,7 @@ export function createServer(
         path: z.string(),
         action: z.literal("created"),
         attachmentPaths: z.array(z.string()),
+        recordUrl: z.string().url().optional(),
       }),
       _meta: { "openai/fileParams": ["attachments"] },
       annotations: {
@@ -228,7 +231,9 @@ export function createServer(
       },
     },
     async ({ date, title, keyword, content, tags, source, attachments }) => {
-      const images = await downloadImageAttachments(attachments ?? []);
+      const images = attachments?.length
+        ? await (await import("./attachments.js")).downloadImageAttachments(attachments)
+        : [];
       return toolResult({
         ...(await store.captureNote({
           date: date ?? currentDate(timeZone),
