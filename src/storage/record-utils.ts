@@ -60,7 +60,7 @@ export function noteDirectory(date: string): string {
 }
 
 /** One file per day. Fragment titles, language and topics belong inside the journal. */
-export function journalFileName(input: Pick<CaptureJournalInput, "date">): string {
+export function journalFileName<T extends { date: string }>(input: T): string {
   return `${compactDate(input.date)}.md`;
 }
 
