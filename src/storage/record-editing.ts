@@ -23,9 +23,11 @@ type Options =
 
 /** Only canonical journal/note Markdown paths from record reads may be edited. */
 export function assertRecordPath(recordPath: string): void {
-  const match = /^(journals|notes)\/(\d{4})\/(\d{6})\/(\d{8})-([^/]+)\.md$/u.exec(recordPath);
+  const match = /^(journals|notes)\/(\d{4})\/(\d{6})\/(\d{8})(?:-([^/]+))?\.md$/u.exec(recordPath);
   if (!match || match[2] !== match[3]!.slice(0, 4) || match[3] !== match[4]!.slice(0, 6) ||
-      match[5] === "." || match[5] === ".." || match[5]!.includes("\\") || match[5]!.includes("..")) {
+      (match[1] === "notes" && !match[5]) ||
+      (match[5] !== undefined && (match[5] === "." || match[5] === ".." ||
+        match[5].includes("\\") || match[5].includes("..")))) {
     throw new Error("Provide an exact journal/note path returned by a record read under journals/ or notes/YYYY/YYYYMM/.");
   }
   const compact = match[4]!;
@@ -46,7 +48,7 @@ export function applyRecordEdit(previous: string, input: RecordEditInput): strin
   const at = previous.indexOf(input.oldText);
   if (at === -1) throw new Error("The original passage is no longer present. Re-read the record before editing.");
   if (previous.indexOf(input.oldText, at + input.oldText.length) !== -1) {
-    throw new Error("The original passage appears more than once. Select a longer unique passage.");
+    throw new Error("The original passage appears more than once. Select a longer unique excerpt.");
   }
   const updated = previous.slice(0, at) + input.content + previous.slice(at + input.oldText.length);
   if (updated === previous) throw new Error("The requested edit does not change the record.");
