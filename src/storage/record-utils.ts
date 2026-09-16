@@ -57,6 +57,26 @@ export function journalFileName(input: CaptureJournalInput): string {
   return `${compactDate(input.date)}-${input.keyword}.md`;
 }
 
+/** Only prepend this heading when creating a new day's journal, never on append. */
+export function journalHeading(input: CaptureJournalInput): string {
+  // Use the record's calendar date in UTC, not the server's current clock or timezone.
+  const day = new Date(`${input.date}T12:00:00Z`);
+  const text = `${input.title}\n${input.content}`;
+  const locale = /[ぁ-ゟ゠-ヿ]/u.test(text)
+    ? "ja-JP"
+    : /[가-힣]/u.test(text)
+      ? "ko-KR"
+      : /\p{Script=Han}/u.test(text)
+        ? "zh-CN"
+        : "en-US";
+  const date = new Intl.DateTimeFormat(locale, {
+    year: "numeric", month: "long", day: "numeric", timeZone: "UTC",
+  }).format(day);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(day);
+  const shortWeekday = locale === "zh-CN" ? weekday.replace(/^星期/, "周") : weekday;
+  return `# ${date} · ${shortWeekday} · ${input.title.trim()}\n\n`;
+}
+
 export function buildJournalFragment(input: CaptureJournalInput): string {
   return `### ${input.title.trim()}\n\n${input.content.trim()}\n`;
 }
