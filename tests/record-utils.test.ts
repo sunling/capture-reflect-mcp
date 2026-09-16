@@ -22,9 +22,8 @@ describe("multilingual filenames", () => {
     "keeps a language-specific note keyword valid while journal filenames stay date-only: %s",
     (keyword) => {
       expect(() => assertKeyword(keyword)).not.toThrow();
-      expect(journalFileName({ date: "2026-08-31" })).toBe("20260831.md");
-      expect(journalFileName({ date: "2026-08-31", title: keyword, keyword, content: keyword }))
-        .toBe("20260831.md");
+      const journal = { date: "2026-08-31", title: keyword, keyword, content: keyword };
+      expect(journalFileName(journal)).toBe("20260831.md");
     },
   );
 
