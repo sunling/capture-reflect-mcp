@@ -2,6 +2,7 @@ import type { RecordsStore } from "../storage/records-store.js";
 import { GitHubRecordsStore } from "../storage/github-records.js";
 import { withFastGitHubSearch } from "../storage/github-search.js";
 import { withAtomicIndexedGitHubWrites } from "../storage/github-atomic-indexed-writes.js";
+import { withNoteEditing } from "../storage/note-editing.js";
 import type { ProductionConfig } from "./config.js";
 import { ConnectionStore, type UserConnection } from "./connection-store.js";
 import { refreshGitHubTokens } from "./github-auth.js";
@@ -66,7 +67,13 @@ export async function recordsStoreForUser(
 
   return {
     connection,
-    store: withGitHubRequestObservability(indexedStore, tracker),
+    store: withNoteEditing(withGitHubRequestObservability(indexedStore, tracker), {
+      kind: "github",
+      repository,
+      token: connection.accessToken,
+      branch: connection.branch,
+      fetch: tracker.fetch,
+    }),
   };
 }
 
@@ -77,6 +84,11 @@ export function lazyRecordsStore(load: () => Promise<RecordsStore>): RecordsStor
   return {
     captureJournal: async (input) => (await get()).captureJournal(input),
     captureNote: async (input) => (await get()).captureNote(input),
+    updateNote: async (input) => {
+      const store = await get();
+      if (!store.updateNote) throw new Error("Note editing is not available for this records store.");
+      return store.updateNote(input);
+    },
     saveReview: async (input) => (await get()).saveReview(input),
     getRecords: async (input) => (await get()).getRecords(input),
     searchRecords: async (input) => (await get()).searchRecords(input),
