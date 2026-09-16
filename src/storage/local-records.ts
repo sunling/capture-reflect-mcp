@@ -10,6 +10,7 @@ import {
   buildNoteDocument,
   compactDate,
   journalFileName,
+  journalHeading,
   noteDirectory,
   recordDateFromPath,
   isRangeReviewPath,
@@ -103,7 +104,7 @@ export class LocalRecordsStore implements RecordsStore {
     }
 
     const filePath = path.join(directory, journalFileName(input));
-    await fs.writeFile(filePath, fragment, { encoding: "utf8", flag: "wx" });
+    await fs.writeFile(filePath, `${journalHeading(input)}${fragment}`, { encoding: "utf8", flag: "wx" });
     return {
       path: path.relative(this.#root, filePath),
       action: "created",
