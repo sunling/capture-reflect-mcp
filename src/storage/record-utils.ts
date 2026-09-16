@@ -1,8 +1,14 @@
+import { randomUUID } from "node:crypto";
 import path from "node:path";
 import type { CaptureJournalInput, CaptureNoteInput } from "./records-store.js";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const SAFE_KEYWORD_PATTERN = /^[\p{L}\p{M}\p{N}_-]{1,40}$/u;
+
+/** A new identity is stored in Markdown, never inferred from a mutable path or Git SHA. */
+export function createRecordId(): string {
+  return `cr_${randomUUID()}`;
+}
 
 export function assertDate(date: string): void {
   if (!DATE_PATTERN.test(date)) {
@@ -57,7 +63,7 @@ export function journalFileName(input: CaptureJournalInput): string {
   return `${compactDate(input.date)}-${input.keyword}.md`;
 }
 
-/** Only prepend this day-level heading on creation; later entries keep their own fragment titles. */
+/** Only prepend this day-level heading and ID on creation; appends preserve existing identity. */
 export function journalHeading(input: CaptureJournalInput): string {
   // Derive the weekday from the record's date, not the server clock or timezone.
   const day = new Date(`${input.date}T12:00:00Z`);
@@ -74,7 +80,7 @@ export function journalHeading(input: CaptureJournalInput): string {
   }).format(day);
   const weekday = new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(day);
   const shortWeekday = locale === "zh-CN" ? weekday.replace(/^星期/, "周") : weekday;
-  return `# ${date} · ${shortWeekday}\n\n`;
+  return `---\nid: ${createRecordId()}\n---\n\n# ${date} · ${shortWeekday}\n\n`;
 }
 
 export function buildJournalFragment(input: CaptureJournalInput): string {
@@ -94,6 +100,7 @@ export function buildNoteDocument(note: CaptureNoteInput): string {
   const tags = note.tags?.filter(Boolean).slice(0, 3) ?? [];
   const frontmatter = [
     "---",
+    `id: ${createRecordId()}`,
     `title: ${JSON.stringify(note.title.trim())}`,
     `date: ${note.date}`,
     ...(note.source ? [`source: ${JSON.stringify(note.source.trim())}`] : []),
