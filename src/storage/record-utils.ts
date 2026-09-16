@@ -60,7 +60,7 @@ export function noteDirectory(date: string): string {
 }
 
 /** A daily journal is a container for the whole day, not its first fragment's topic. */
-export function journalFileName(input: Pick<CaptureJournalInput, "date">): string {
+export function journalFileName(input: Pick<CaptureJournalInput, "date"> & Partial<CaptureJournalInput>): string {
   return `${compactDate(input.date)}.md`;
 }
 
