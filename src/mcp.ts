@@ -62,7 +62,7 @@ export function createServer(
     { name: "capture-reflect", version: "0.6.0" },
     {
       instructions:
-        "Choose capture_journal or capture_note from the user's intended subject, not from a trigger word appearing in the text. Use capture_journal for lived experiences, events, feelings, observations about the user's day, or an explicit instruction to save the material as a journal. Use capture_note for encountered material, knowledge, quotations, technical observations, debugging findings, measurements, product tests, design decisions, and ideas the user wants to remember. Use update_note for explicitly requested additions or corrections to an existing note: search for the exact path first, append new material or replace a unique exact excerpt; never create a separate supplement without a user request. A sentence such as '记录日记时 durationMs 是 6685' is a technical note about the recording system, not a journal request, unless the user explicitly says to save it as a journal. The interface and tool metadata are English-first, but records may use any language. Preserve the user's original language, script, wording, uncertainty, and code-switching; never translate a title or body unless the user explicitly asks. Respond in the language of the user's current request unless they request another language. For recall and review, keep quotations in their original language and clearly label any requested translation. Do not attribute conclusions to the user that they did not express. For note capture, keep the original note verbatim and place any AI-generated connections or reflections in separate, explicitly labeled sections as described by capture_note and the capture-record skill. When the user says today or gives no date, omit the date argument so the server applies its configured time zone. Only pass date when the user explicitly specifies a calendar date. After a successful capture or edit, present recordUrl as a clickable Markdown link when it is returned. Use read tools before reviews or questions about prior records. Follow review-records and finish a requested review with save_review unless the user asks for chat-only output. Read earlier reviews only as interpretations to check against original records, not as independent evidence. When the user asks to switch GitHub accounts, call get_github_account_switch_link. For initial setup, repository changes, or time-zone updates, call get_github_setup_link and give them its setupUrl; the AI client's own reconnect action does not replace this setup flow.",
+        "Choose capture_journal or capture_note based on the intended subject, not trigger words. Use capture_journal for lived experiences, feelings, events, or daily reflections; it creates a journal or automatically appends a new fragment for the same date. Use capture_note to create a new note for knowledge, encountered material, quotations, technical observations, measurements, product tests, design decisions, and ideas. When a user explicitly wants to add to or correct an existing journal or note, use update_record: first search/read the exact target path, then append new material or replace one uniquely matching exact excerpt. Do not create a duplicate note because its path exists. For example '记录日记时 durationMs 是 6685' is a technical note, not a journal, unless the user explicitly requests a journal. Journal and note content may be in any language; preserve the original language, wording, uncertainty, code-switching, and original note text verbatim; never translate unless requested. Keep AI connections and reflections separate and explicitly labeled. Reply in the language of the current request. When the user says today or gives no date, omit the date argument to use the server-configured time zone; supply dates only when explicitly specified. After a successful capture or edit, present recordUrl as a clickable Markdown link when returned. Read records before reviews or questions about prior records; follow review-records and save_review for requested saved reviews. Treat prior review interpretations as distinct from original evidence. To switch GitHub accounts use get_github_account_switch_link; to set up GitHub, change repositories or update the time zone use get_github_setup_link, not the AI client's reconnect action.",
     },
   );
 
@@ -140,36 +140,19 @@ export function createServer(
   server.registerTool(
     "capture_journal",
     {
-      title: "Record a journal entry",
+      title: "Create or append a journal entry",
       description:
-        "Record a personal journal entry fragment in any language when the user asks to save a lived experience, event, feeling, observation about their day, or daily reflection, or explicitly asks to save the material as a journal. Classify by intended subject, not by the mere appearance of words such as journal or 日记. Do not use this tool for technical observations, debugging findings, measurements, product tests, design decisions, or ideas about the recording system; use capture_note for those. Lightly edit for readability while preserving the user's original language, wording, code-switching, uncertainty, and unfinished thoughts. Never translate unless explicitly requested.",
+        "Record a personal journal fragment in the user's original language. Automatically create a journal file for the record date or append a new headed fragment to the existing journal for that date. Use for lived experiences, feelings, events and daily reflections, not technical debugging or ideas about the recording system (use capture_note). For a correction of existing journal text, or when the user explicitly identifies an existing journal path to update, use update_record after reading that file. Lightly edit for readability without inventing details or translating.",
       inputSchema: z.object({
-        date: z
-          .string()
-          .optional()
-          .describe(
-            "YYYY-MM-DD. Omit when the user says today or gives no date; the server will use today in its configured time zone. Pass only for an explicitly specified calendar date.",
-          ),
+        date: z.string().optional().describe("YYYY-MM-DD. Omit for today or unspecified date; the server uses its configured time zone. Supply only for an explicitly specified calendar date."),
         title: z.string().min(1).describe("Short factual fragment heading in the user's original language"),
-        keyword: z
-          .string()
-          .min(1)
-          .max(40)
-          .describe("Short filename keyword in the user's language when practical; Unicode letters, combining marks, and numbers, underscores, and hyphens are supported"),
-        content: z.string().min(1).describe("Markdown journal entry body in the user's original language, without translation, invented summaries, or tags"),
-        attachments: z
-          .array(fileParamSchema)
-          .max(5)
-          .optional()
-          .describe("Optional image files supplied by the AI client"),
+        keyword: z.string().min(1).max(40).describe("Short filename keyword in the user's language; Unicode letters, combining marks, numbers, underscores and hyphens are supported"),
+        content: z.string().min(1).describe("Markdown journal entry in the user's original language, without translation, invented summaries, or tags"),
+        attachments: z.array(fileParamSchema).max(5).optional().describe("Optional image files supplied by the AI client"),
       }),
       outputSchema: captureResultSchema,
       _meta: { "openai/fileParams": ["attachments"] },
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        openWorldHint: true,
-      },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
     async ({ date, title, keyword, content, attachments }) => {
       const images = attachments?.length
@@ -190,33 +173,17 @@ export function createServer(
   server.registerTool(
     "capture_note",
     {
-      title: "Save a note",
+      title: "Create a note",
       description:
-        "Save a new note in any language when the user asks to keep an article, book, podcast, video, course, conversation, quotation, link, something they learned, a technical observation, debugging finding, measurement, product test, design decision, or idea. Use update_note instead to append to or correct an existing note; first search for its exact path. Use this tool when the subject is the recording system itself even if the text mentions journal or 日记; for example, '记录日记时 durationMs 是 6685' is a note about system performance. Follow the capture-record skill: preserve the original note verbatim under Original note, with optional Source, Related journal entries, and Further reflection sections, using headings in the note's language. Before saving, unless the user asks to skip enrichment, start with one focused search_records query using types: ['journal']; only make another focused search when the first result is clearly insufficient, with at most three searches total. Read returned content and include at most three meaningful connections with dates, relative file links, exact excerpts, and explanations labeled Possible connection (AI). Label further AI reflections explicitly and never attribute them to the user. Omit empty optional sections. If lookup fails, still save the original and disclose the lookup failure. Respect an explicitly requested format. This tool stores the supplied Markdown; it does not search or structure it automatically. After saving, present recordUrl as a clickable Markdown link when it is returned.",
+        "Create a note in any language when the user asks to keep an article, book, podcast, video, course, conversation, quotation, link, something learned, technical observation, debugging finding, measurement, product test, design decision, or idea. Use update_record for additions or corrections to an existing note; locate its exact path first. The recording system itself is a note subject even if the content contains journal or 日记. Preserve the user's original text verbatim under Original note and include optional Source, Related journal entries, and Further reflection in the note's language. Unless skipped, search_records once with types: ['journal'], making at most three focused searches, and include up to three genuine connections with verified dates, relative links, exact excerpts, and explanations labeled Possible connection (AI). Label AI reflections as AI and omit empty sections. If lookup fails, save the original and disclose the failure. Honor explicitly requested formatting. Supplied Markdown is stored as-is; this tool does not automatically search or structure it. After saving show recordUrl if returned.",
       inputSchema: z.object({
-        date: z
-          .string()
-          .optional()
-          .describe(
-            "YYYY-MM-DD. Omit when the user says today or gives no date; the server will use today in its configured time zone. Pass only for an explicitly specified calendar date.",
-          ),
+        date: z.string().optional().describe("YYYY-MM-DD. Omit for today or unspecified date; the server uses its configured time zone. Supply only for an explicitly specified calendar date."),
         title: z.string().min(1).describe("Title in the user's original language"),
-        keyword: z
-          .string()
-          .min(1)
-          .max(40)
-          .describe("Short filename keyword in the user's language when practical; Unicode letters, combining marks, and numbers, underscores, and hyphens are supported"),
-        content: z
-          .string()
-          .min(1)
-          .describe("Markdown body with a required Original note section containing the user's original text verbatim; optional Source, Related journal entries (verified journal links and excerpts, with AI-labeled possible connections), and Further reflection (AI-labeled) sections. Use headings in the note's language and omit empty optional sections. Honor an explicitly requested format; keep rewrites separate from the original."),
+        keyword: z.string().min(1).max(40).describe("Short filename keyword in the user's language; Unicode letters, combining marks, numbers, underscores and hyphens are supported"),
+        content: z.string().min(1).describe("Markdown with the user's original text verbatim under an Original note heading; optional verified Source, Related journal entries, and explicitly AI-labeled Further reflection. Use the note's language; omit empty optional sections and honor explicit formatting requests."),
         tags: z.array(z.string().min(1)).max(3).optional(),
         source: z.string().min(1).optional().describe("Source title or URL when available"),
-        attachments: z
-          .array(fileParamSchema)
-          .max(5)
-          .optional()
-          .describe("Optional image files supplied by the AI client"),
+        attachments: z.array(fileParamSchema).max(5).optional().describe("Optional image files supplied by the AI client"),
       }),
       outputSchema: z.object({
         path: z.string(),
@@ -225,11 +192,7 @@ export function createServer(
         recordUrl: z.string().url().optional(),
       }),
       _meta: { "openai/fileParams": ["attachments"] },
-      annotations: {
-        readOnlyHint: false,
-        destructiveHint: false,
-        openWorldHint: true,
-      },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
     async ({ date, title, keyword, content, tags, source, attachments }) => {
       const images = attachments?.length
@@ -250,16 +213,16 @@ export function createServer(
   );
 
   server.registerTool(
-    "update_note",
+    "update_record",
     {
-      title: "Append to or edit an existing note",
+      title: "Append to or edit an existing journal or note",
       description:
-        "Update the original note instead of creating a duplicate supplement. FIRST find and read the exact note using search_records or get_records_by_date_range, then copy its returned path. For append, supply only new Markdown, with a suitable supplementary heading when useful; original material is preserved. For replace, supply an exact unique oldText excerpt copied from the existing note and its corrected new content; do not regenerate the rest of the document. Never guess the path or modify notes based solely on a similar title. If more than one note could match, ask the user to select the target. The server updates the existing file safely and keeps the index current when present; conflicting writes are retried, and an absent or ambiguous replacement is rejected. If the user asks for merely additional research, append rather than overwrite original text. Show recordUrl after a successful update.",
+        "Update an existing journal or note in place. FIRST find and read the exact target using search_records (types journal or note) or get_records_by_date_range, then copy the returned path. Use mode append for new material: preserve existing content, add only new Markdown, and provide a suitable ### fragment heading for journals or ## section heading for notes when helpful. Use mode replace for corrections: pass exact unique oldText from the returned content and only the correction, never regenerate the whole document. For a normal new journal fragment capture_journal already creates/appends by date; use this tool for explicit updates to identified existing records. Do not guess a path or change a record based solely on a similar title; if targets are ambiguous ask the user to select. The server rejects absent, repeated, or ambiguous replacement text and duplicate appends, and retries GitHub commit conflicts. Show recordUrl when returned.",
       inputSchema: z.object({
-        path: z.string().min(1).describe("Exact notes/YYYY/YYYYMM/filename.md path returned from a record search/read; never guess or reconstruct it."),
-        mode: z.enum(["append", "replace"]).describe("append new material or replace exactly one existing passage"),
-        content: z.string().min(1).describe("New Markdown to append, or replacement text for oldText. Preserve the user's original language and clearly label any AI-generated additions."),
-        oldText: z.string().min(1).optional().describe("Required for replace only: exact unique original passage copied from the existing note."),
+        path: z.string().min(1).describe("Exact journals/YYYY/YYYYMM/filename.md or notes/YYYY/YYYYMM/filename.md path returned by a record search/read; never invent it."),
+        mode: z.enum(["append", "replace"]).describe("Append new material without removing old text or replace exactly one existing passage"),
+        content: z.string().min(1).describe("Only the new Markdown to append or text replacing oldText; keep the original language and label AI-created additions."),
+        oldText: z.string().min(1).optional().describe("Required for replace: a unique exact excerpt copied from the current record. Omit for append."),
       }),
       outputSchema: z.object({
         path: z.string(),
@@ -269,8 +232,8 @@ export function createServer(
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
     async (input) => {
-      if (!store.updateNote) throw new Error("Note editing is unavailable in this records store.");
-      return toolResult(await store.updateNote(input));
+      if (!store.updateRecord) throw new Error("Record editing is unavailable in this records store.");
+      return toolResult(await store.updateRecord(input));
     },
   );
 
@@ -306,11 +269,7 @@ export function createServer(
         types: z.array(recordTypeSchema).optional().describe("Defaults to journals and notes. Include review explicitly to retrieve saved interpretations; date filters use the save date, not the reviewed period."),
       }),
       outputSchema: z.object({ from: z.string(), to: z.string(), timeZone: z.string(), records: z.array(storedRecordSchema) }),
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: false,
-      },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ from, to, types }) => {
       const range = resolveDateRange({ from, to }, timeZone);
@@ -331,15 +290,11 @@ export function createServer(
         query: z.string().min(1),
         from: z.string().optional().describe("Optional start date in YYYY-MM-DD"),
         to: z.string().optional().describe("Optional end date in YYYY-MM-DD"),
-        types: z.array(recordTypeSchema).optional().describe("Defaults to journals and notes. Include review explicitly to retrieve saved interpretations; date filters use the save date, not the reviewed period."),
+        types: z.array(recordTypeSchema).optional().describe("Defaults to journals and notes. Include review explicitly to retrieve saved reviews; date filters use save date, not reviewed period."),
         limit: z.number().int().min(1).max(100).optional(),
       }),
       outputSchema: z.object({ records: z.array(searchRecordSchema) }),
-      annotations: {
-        readOnlyHint: true,
-        destructiveHint: false,
-        openWorldHint: false,
-      },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ query, from, to, types, limit }) =>
       toolResult({
