@@ -20,6 +20,7 @@ export interface GitHubRateLimitSnapshot {
 
 export interface GitHubRequestSnapshot {
   total: number;
+  durationMs: number;
   byCategory: RequestCounts;
   rateLimit?: GitHubRateLimitSnapshot;
 }
@@ -92,6 +93,7 @@ export function createGitHubRequestTracker(
   baseFetch: typeof globalThis.fetch = globalThis.fetch,
 ): GitHubRequestTracker {
   let total = 0;
+  let durationMs = 0;
   const byCategory = emptyCounts();
   let rateLimit: GitHubRateLimitSnapshot | undefined;
 
@@ -103,15 +105,21 @@ export function createGitHubRequestTracker(
     total += 1;
     byCategory[requestCategory(url, method, init?.body)] += 1;
 
-    const response = await baseFetch(input, init);
-    rateLimit = readRateLimit(response.headers) ?? rateLimit;
-    return response;
+    const startedAt = performance.now();
+    try {
+      const response = await baseFetch(input, init);
+      rateLimit = readRateLimit(response.headers) ?? rateLimit;
+      return response;
+    } finally {
+      durationMs += performance.now() - startedAt;
+    }
   };
 
   return {
     fetch: trackedFetch,
     snapshot: () => ({
       total,
+      durationMs,
       byCategory: { ...byCategory },
       ...(rateLimit ? { rateLimit: { ...rateLimit } } : {}),
     }),
@@ -135,6 +143,7 @@ function observedStoreMethod<T>(
   action: () => Promise<T>,
 ): Promise<T> {
   const before = tracker.snapshot();
+  const startedAt = performance.now();
   let outcome: "success" | "error" = "success";
   return action()
     .catch((error) => {
@@ -149,6 +158,8 @@ function observedStoreMethod<T>(
         JSON.stringify({
           operation,
           outcome,
+          durationMs: Math.round(performance.now() - startedAt),
+          githubMs: Math.round(after.durationMs - before.durationMs),
           requests,
           byCategory: diffCounts(after.byCategory, before.byCategory),
           ...(requests > 0 && after.rateLimit ? { rateLimit: after.rateLimit } : {}),
