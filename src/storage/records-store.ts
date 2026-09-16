@@ -39,6 +39,22 @@ export interface CaptureNoteInput {
   attachments?: RecordAttachment[];
 }
 
+export interface NoteEditInput {
+  /** Exact path obtained from a record read, never reconstructed from a title. */
+  path: string;
+  /** Append an additional Markdown section, or replace a single exact passage. */
+  mode: "append" | "replace";
+  content: string;
+  /** Required only for replace: an exact unique excerpt from the existing note. */
+  oldText?: string;
+}
+
+export interface NoteEditResult {
+  path: string;
+  action: "appended" | "updated";
+  recordUrl?: string;
+}
+
 export interface SaveReviewInput {
   date: string;
   from: string;
@@ -52,11 +68,12 @@ export interface SaveReviewInput {
 export interface RecordsStore {
   saveReview(input: SaveReviewInput): Promise<{ path: string; action: "created" }>;
 
-  captureJournal(
-    input: CaptureJournalInput,
-  ): Promise<CaptureResult>;
+  captureJournal(input: CaptureJournalInput): Promise<CaptureResult>;
 
   captureNote(input: CaptureNoteInput): Promise<CaptureResult & { action: "created" }>;
+
+  /** Present on note-edit-capable stores. Older test doubles may omit it. */
+  updateNote?(input: NoteEditInput): Promise<NoteEditResult>;
 
   getRecords(options: {
     from: string;
