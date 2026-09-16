@@ -85,7 +85,7 @@ function readRateLimit(headers: Headers): GitHubRateLimitSnapshot | undefined {
   if (limit !== undefined) rateLimit.limit = limit;
   if (remaining !== undefined) rateLimit.remaining = remaining;
   if (used !== undefined) rateLimit.used = used;
-  if (reset !== undefined) rateLimit.reset;
+  if (reset !== undefined) rateLimit.reset = reset;
   if (resource !== null) rateLimit.resource = resource;
   return Object.keys(rateLimit).length > 0 ? rateLimit : undefined;
 }
