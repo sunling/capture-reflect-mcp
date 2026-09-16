@@ -26,19 +26,19 @@ describe("journal headings", () => {
       content: "今天进行了调整。",
     };
     expect(journalFileName(input)).toBe("20260915-记录系统优化.md");
-    expect(journalHeading(input)).toBe("# 2026年9月15日 · 周二 · 记录系统优化\n\n");
+    expect(journalHeading(input)).toBe("# 2026年9月15日 · 周二\n\n");
   });
 
   it("uses an English heading for English journal entries", () => {
     expect(journalHeading({
       date: "2026-09-15", title: "A morning walk", keyword: "walk", content: "I went outside.",
-    })).toBe("# September 15, 2026 · Tuesday · A morning walk\n\n");
+    })).toBe("# September 15, 2026 · Tuesday\n\n");
   });
 
   it("keeps the weekday aligned to the journal date, including a Sunday", () => {
     expect(journalHeading({
       date: "2026-09-13", title: "回家", keyword: "回家", content: "旅行结束。",
-    })).toBe("# 2026年9月13日 · 周日 · 回家\n\n");
+    })).toBe("# 2026年9月13日 · 周日\n\n");
   });
 
   it("creates one day-level heading and does not repeat it when appending", async () => {
@@ -52,7 +52,7 @@ describe("journal headings", () => {
     const body = await fs.readFile(path.join(root, first.path), "utf8");
     expect(first.path).toBe("journals/2026/202609/20260915-早晨.md");
     expect(second).toMatchObject({ action: "appended", path: first.path });
-    expect(body).toMatch(/^# 2026年9月15日 · 周二 · 早餐\n\n### 早餐\n\n吃了早饭。/);
+    expect(body).toMatch(/^# 2026年9月15日 · 周二\n\n### 早餐\n\n吃了早饭。/);
     expect(body).toContain("### 晚间\n\n补充今天的记录。");
     expect(body.match(/^# /gm)).toHaveLength(1);
   });
