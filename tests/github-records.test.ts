@@ -156,7 +156,7 @@ describe("GitHubRecordsStore", () => {
     const note = await store.captureNote({ date: "2026-09-01", title: "散步", keyword: "散步", content: "A walk helped me focus." });
     const input = { date: "2026-09-14", from: "2026-09-01", to: "2026-09-07", title: "Weekly review", keyword: "weekly", content: "## Interpretation (AI)\nWalking may help focus.\n\n## Questions\nDoes this recur?", sourcePaths: [note.path] };
     const result = await store.saveReview(input);
-    expect(result).toEqual({ path: "reviews/2026/202609/20260914-weekly.md", action: "created" });
+    expect(result).toEqual({ path: "reviews/2026/202609/20260901-20260907-weekly.md", action: "created" });
     const reviews = await store.getRecords({ from: "2026-09-14", to: "2026-09-14", types: ["review"] });
     expect(reviews).toHaveLength(1);
     expect(reviews[0]?.content).toContain("from: 2026-09-01");
@@ -168,7 +168,7 @@ describe("GitHubRecordsStore", () => {
     expect(await store.getRecords({ from: input.from, to: input.to, types: ["review"] })).toHaveLength(0);
     await expect(store.saveReview({ ...input, content: "replacement" })).rejects.toThrow();
     expect((await store.getRecords({ from: "2026-09-14", to: "2026-09-14", types: ["review"] }))[0]?.content).toBe(reviews[0]?.content);
-    for (const sourcePaths of [[], ["../secret.md"], ["reviews/2026/202609/20260914-weekly.md"], ["notes/missing.md"]]) {
+    for (const sourcePaths of [[], ["../secret.md"], ["reviews/2026/202609/20260901-20260907-weekly.md"], ["notes/missing.md"]]) {
       await expect(store.saveReview({ ...input, keyword: "invalid", sourcePaths })).rejects.toThrow();
     }
     await expect(store.saveReview({ ...input, keyword: "outside", from: "2026-09-02" })).rejects.toThrow();

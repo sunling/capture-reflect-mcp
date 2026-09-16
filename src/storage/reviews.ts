@@ -45,7 +45,7 @@ export async function prepareReview(store: RecordsStore, input: SaveReviewInput)
     throw new ReviewSourceValidationError("REVIEW_SOURCES_NOT_IN_RANGE", input.from, input.to, sources.length, unavailablePaths);
   }
   const date = compactDate(input.date);
-  const reviewPath = `reviews/${date.slice(0, 4)}/${date.slice(0, 6)}/${date}-${input.keyword}.md`;
+  const reviewPath = `reviews/${date.slice(0, 4)}/${date.slice(0, 6)}/${compactDate(input.from)}-${compactDate(input.to)}-${input.keyword}.md`;
   const metadata = [
     "---", `title: ${JSON.stringify(input.title.trim())}`, `date: ${input.date}`,
     `from: ${input.from}`, `to: ${input.to}`, "type: review", "source_paths:",

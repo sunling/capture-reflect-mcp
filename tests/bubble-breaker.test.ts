@@ -86,7 +86,7 @@ describe("Bubble Breaker MCP integration", () => {
       expect(store.getRecords).toHaveBeenCalledTimes(1);
       expect(listing.tools.find((tool: any) => tool.name === "save_review").annotations).toMatchObject({ readOnlyHint: false, destructiveHint: false });
       const review = { from: "2026-09-01", to: "2026-09-07", title: "Review", keyword: "weekly", content: "AI interpretation: limited evidence.", sourcePaths: ["notes/2026/202609/20260901-note.md"] };
-      store.saveReview.mockResolvedValue({ path: "reviews/2026/202609/20260914-weekly.md", action: "created" });
+      store.saveReview.mockResolvedValue({ path: "reviews/2026/202609/20260901-20260907-weekly.md", action: "created" });
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-09-13T23:30:00Z"));
       try {

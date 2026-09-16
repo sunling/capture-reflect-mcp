@@ -167,6 +167,7 @@ try {
   const corrected = { ...review, sourcePaths: weekly.records.map((record) => record.path) };
   const saved = await successful("save_review", corrected, "save corrected review");
   assert.equal(saved.action, "created");
+  assert.equal(saved.path, "reviews/2026/202609/20260908-20260914-weekly.md");
   const readBack = (await readReviews()).records;
   assert.equal(readBack.length, 1);
   assert.equal(readBack[0].path, saved.path);

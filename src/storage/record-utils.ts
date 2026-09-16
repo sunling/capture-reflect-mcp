@@ -26,7 +26,19 @@ export function compactDate(date: string): string {
   return date.replaceAll("-", "");
 }
 
-export function recordDateFromPath(filePath: string): string | undefined {
+export function isRangeReviewPath(filePath: string): boolean {
+  return filePath.startsWith("reviews/") && /^\d{8}-\d{8}-.+\.md$/.test(path.basename(filePath));
+}
+
+export function recordDateFromPath(filePath: string, content?: string): string | undefined {
+  if (isRangeReviewPath(filePath)) {
+    // Range filenames describe the reviewed period, not the save date.
+    const frontmatter = content?.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1];
+    const savedDate = frontmatter?.match(/^date: *["']?(\d{4}-\d{2}-\d{2})["']? *\r?$/m)?.[1];
+    if (!savedDate) return undefined;
+    try { assertDate(savedDate); } catch { return undefined; }
+    return savedDate;
+  }
   const match = path.basename(filePath).match(/^(\d{4})(\d{2})(\d{2})/);
   return match ? `${match[1]}-${match[2]}-${match[3]}` : undefined;
 }

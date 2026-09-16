@@ -12,6 +12,7 @@ import {
   journalFileName,
   noteDirectory,
   recordDateFromPath,
+  isRangeReviewPath,
 } from "./record-utils.js";
 import type {
   SaveReviewInput,
@@ -212,13 +213,15 @@ export class LocalRecordsStore implements RecordsStore {
           const files = await walkMarkdownFiles(root.path);
           return Promise.all(
             files.map(async (filePath): Promise<StoredRecord | undefined> => {
-              const date = recordDateFromPath(filePath);
+              const relativePath = path.relative(this.#root, filePath);
+              const content = isRangeReviewPath(relativePath) ? await fs.readFile(filePath, "utf8") : undefined;
+              const date = recordDateFromPath(relativePath, content);
               if (!date || date < options.from || date > options.to) return undefined;
               return {
-                path: path.relative(this.#root, filePath),
+                path: relativePath,
                 date,
                 type: root.type,
-                content: await fs.readFile(filePath, "utf8"),
+                content: content ?? await fs.readFile(filePath, "utf8"),
               };
             }),
           );

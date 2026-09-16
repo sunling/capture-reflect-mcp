@@ -10,6 +10,7 @@ import {
   journalFileName,
   noteDirectory,
   recordDateFromPath,
+  isRangeReviewPath,
 } from "./record-utils.js";
 import type {
   SaveReviewInput,
@@ -304,7 +305,7 @@ export class GitHubRecordsStore implements RecordsStore {
           ? "review"
           : "note";
       return Boolean(
-        date && date >= options.from && date <= options.to && requested.has(type),
+        requested.has(type) && (isRangeReviewPath(path) || (date && date >= options.from && date <= options.to)),
       );
     });
 
@@ -312,7 +313,7 @@ export class GitHubRecordsStore implements RecordsStore {
     return candidates
       .map(({ path }): StoredRecord => ({
         path,
-        date: recordDateFromPath(path)!,
+        date: recordDateFromPath(path, files.get(path)!.content)!,
         type: path.startsWith("journals/")
           ? "journal"
           : path.startsWith("reviews/")
@@ -320,6 +321,7 @@ export class GitHubRecordsStore implements RecordsStore {
             : "note",
         content: files.get(path)!.content,
       }))
+      .filter((record) => record.date && record.date >= options.from && record.date <= options.to)
       .sort((a, b) => a.path.localeCompare(b.path));
   }
 

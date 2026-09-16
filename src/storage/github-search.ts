@@ -1,6 +1,7 @@
 import {
   assertDate,
   recordDateFromPath,
+  isRangeReviewPath,
 } from "./record-utils.js";
 import type {
   RecordsStore,
@@ -140,9 +141,7 @@ class FastGitHubSearch {
       .filter(({ path }) => {
         const date = recordDateFromPath(path);
         if (
-          !date ||
-          date < from ||
-          date > to ||
+          (!isRangeReviewPath(path) && (!date || date < from || date > to)) ||
           !requested.has(recordTypeFromPath(path))
         ) {
           return false;
@@ -152,7 +151,7 @@ class FastGitHubSearch {
       })
       .sort((a, b) => a.path.localeCompare(b.path));
 
-    return this.#searchExact(candidates, query, limit, synced.refreshed);
+    return this.#searchExact(candidates, query, limit, synced.refreshed, from, to);
   }
 
   async #listTree(): Promise<SearchTreeSnapshot> {
@@ -385,6 +384,8 @@ class FastGitHubSearch {
     query: string,
     limit: number,
     cached: Map<string, StoredRecord>,
+    from: string,
+    to: string,
   ): Promise<Array<StoredRecord & { excerpts: string[] }>> {
     const matches: Array<StoredRecord & { excerpts: string[] }> = [];
     const waveSize = GRAPHQL_BLOB_BATCH_SIZE * GRAPHQL_BATCH_CONCURRENCY;
@@ -398,6 +399,7 @@ class FastGitHubSearch {
       for (const candidate of wave) {
         const record = cached.get(candidate.path);
         if (!record) throw new Error(`GitHub did not return record content for ${candidate.path}.`);
+        if (!record.date || record.date < from || record.date > to) continue;
         const excerpts = record.content
           .split("\n")
           .filter((line) => line.toLocaleLowerCase().includes(query))
@@ -534,7 +536,7 @@ class FastGitHubSearch {
       }
       return {
         path,
-        date: recordDateFromPath(path)!,
+        date: recordDateFromPath(path, blob.text)!,
         type: recordTypeFromPath(path),
         content: blob.text,
       };

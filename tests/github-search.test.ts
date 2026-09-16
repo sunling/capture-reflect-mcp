@@ -147,6 +147,25 @@ function createStore(api: FakeGitHubSearchApi): RecordsStore {
 }
 
 describe("indexed GitHub search", () => {
+  it("filters range-named reviews by metadata save date before applying the result limit", async () => {
+    const api = new FakeGitHubSearchApi();
+    const excluded = "reviews/2027/202701/20261201-20261207-earlier.md";
+    const included = "reviews/2027/202701/20261225-20261231-计划被打乱之后.md";
+    const legacy = "reviews/2027/202701/20270102-legacy.md";
+    api.files.push(
+      { path: excluded, sha: "excluded", content: "---\ndate: 2027-01-01\n---\nreview-marker" },
+      { path: included, sha: "included", content: "---\ndate: 2027-01-02\n---\nreview-marker" },
+      { path: legacy, sha: "legacy", content: "review-marker" },
+    );
+    const store = createStore(api);
+    const options = { query: "review-marker", from: "2027-01-02", to: "2027-01-02", types: ["review" as const] };
+    const limited = await store.searchRecords({ ...options, limit: 1 });
+    expect(limited.map((record) => record.path)).toEqual([included]);
+    expect(limited[0]?.date).toBe("2027-01-02");
+    expect((await store.searchRecords(options)).map((record) => record.path)).toEqual([included, legacy]);
+    expect(await store.searchRecords({ ...options, from: "2026-12-01", to: "2026-12-31" })).toEqual([]);
+  });
+
   it("builds the index once, then narrows a warm search to candidate records", async () => {
     const api = new FakeGitHubSearchApi();
     addFiles(api, 275, (index) => index === 274 ? "needle appears here" : `record ${index}`);
