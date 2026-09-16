@@ -7,6 +7,7 @@ import {
   compactDate,
   journalDirectory,
   journalFileName,
+  journalHeading,
   noteDirectory,
 } from "./record-utils.js";
 import { prepareReview } from "./reviews.js";
@@ -200,7 +201,7 @@ class AtomicIndexedWriter {
       const filePath = existingRecord?.path ?? `${directory}/${journalFileName(input)}`;
       const content = existingRecord
         ? `${await this.#loadTextBlob(existingRecord.sha)}\n${fragment}`
-        : fragment;
+        : `${journalHeading(input)}${fragment}`;
       const additions = [...attachments.additions, this.#textAddition(filePath, content)];
       await this.#addAtomicIndexUpdate(snapshot, filePath, content, additions);
 
