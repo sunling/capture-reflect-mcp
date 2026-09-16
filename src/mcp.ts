@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/server";
 import * as z from "zod/v4";
 import { getBubbleBreakerContext } from "./bubble-breaker.js";
+import { resolveDateRange } from "./date-range.js";
 import { loadSkillCatalog, registerSkills } from "./skill-catalog.js";
 import type { RecordsStore } from "./storage/records-store.js";
 
@@ -273,23 +274,26 @@ export function createServer(
     {
       title: "Read records by date range",
       description:
-        "Read journal entries and notes in any language within an inclusive date range, or saved reviews with types: ['review']. Review dates are save dates; the reviewed period is recorded as from/to in each review. Use this before weekly or monthly reviews and whenever the user asks what they recorded during a period. Preserve source-language quotations; explain or summarize in the language of the user's request.",
+        "Read journal entries and notes in any language within an inclusive date range, or saved reviews with types: ['review']. Omit both from and to for the last seven calendar days including today in the configured time zone. Honor any user-specified period instead. Reuse the returned from/to when saving a review. Review dates are save dates; the reviewed period is recorded as from/to in each review. Use this before weekly or monthly reviews and whenever the user asks what they recorded during a period. Preserve source-language quotations; explain or summarize in the language of the user's request.",
       inputSchema: z.object({
-        from: z.string().describe("Inclusive start date in YYYY-MM-DD"),
-        to: z.string().describe("Inclusive end date in YYYY-MM-DD"),
+        from: z.string().optional().describe("Inclusive start date YYYY-MM-DD. Provide both dates for a custom period, or omit both for the last seven calendar days including today."),
+        to: z.string().optional().describe("Inclusive end date YYYY-MM-DD. Provide together with from, or omit both."),
         types: z.array(recordTypeSchema).optional().describe("Defaults to journals and notes. Include review explicitly to retrieve saved interpretations; date filters use the save date, not the reviewed period."),
       }),
-      outputSchema: z.object({ records: z.array(storedRecordSchema) }),
+      outputSchema: z.object({ from: z.string(), to: z.string(), timeZone: z.string(), records: z.array(storedRecordSchema) }),
       annotations: {
         readOnlyHint: true,
         destructiveHint: false,
         openWorldHint: false,
       },
     },
-    async ({ from, to, types }) =>
-      toolResult({
-        records: await store.getRecords({ from, to, ...(types ? { types } : {}) }),
-      }),
+    async ({ from, to, types }) => {
+      const range = resolveDateRange({ from, to }, timeZone);
+      return toolResult({
+        from: range.from, to: range.to, timeZone: range.timeZone,
+        records: await store.getRecords({ from: range.from, to: range.to, ...(types ? { types } : {}) }),
+      });
+    },
   );
 
   server.registerTool(

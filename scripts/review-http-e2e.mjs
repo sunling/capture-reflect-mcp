@@ -106,6 +106,13 @@ try {
     return result.structuredContent;
   }
 
+  const beforeDefault = new Date().toISOString().slice(0, 10);
+  const defaultRange = await successful("get_records_by_date_range", {}, "default seven-day range");
+  const afterDefault = new Date().toISOString().slice(0, 10);
+  assert.ok([beforeDefault, afterDefault].includes(defaultRange.to));
+  assert.equal(defaultRange.timeZone, "UTC");
+  assert.equal(Date.parse(defaultRange.to) - Date.parse(defaultRange.from), 6 * 86_400_000);
+
   let expectedCurrentPaths;
   let expectedPreviousPaths;
   let fixture;

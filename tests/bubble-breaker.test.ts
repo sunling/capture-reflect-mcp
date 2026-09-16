@@ -101,6 +101,25 @@ describe("Bubble Breaker MCP integration", () => {
       expect(store.saveReview).toHaveBeenCalledTimes(1);
       await request("tools/call", { name: "get_records_by_date_range", arguments: { from: "2026-09-01", to: "2026-09-30", types: ["review"] } });
       expect(store.getRecords).toHaveBeenLastCalledWith({ from: "2026-09-01", to: "2026-09-30", types: ["review"] });
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-09-14T23:30:00Z"));
+      try {
+        // The configured Tokyo date is September 15, not the UTC date.
+        const defaultRead = await request("tools/call", { name: "get_records_by_date_range", arguments: {} });
+        expect(defaultRead.isError).not.toBe(true);
+        expect(defaultRead.structuredContent).toMatchObject({ from: "2026-09-09", to: "2026-09-15", timeZone: "Asia/Tokyo", records: [] });
+        expect(store.getRecords).toHaveBeenLastCalledWith({ from: "2026-09-09", to: "2026-09-15" });
+        const explicitRead = await request("tools/call", { name: "get_records_by_date_range", arguments: { from: "2026-09-05", to: "2026-09-11" } });
+        expect(explicitRead.structuredContent).toMatchObject({ from: "2026-09-05", to: "2026-09-11" });
+        const before = store.getRecords.mock.calls.length;
+        for (const args of [{ from: "2026-09-05" }, { to: "2026-09-11" }]) {
+          const incomplete = await request("tools/call", { name: "get_records_by_date_range", arguments: args });
+          expect(incomplete.isError).toBe(true);
+        }
+        expect(store.getRecords).toHaveBeenCalledTimes(before);
+      } finally {
+        vi.useRealTimers();
+      }
     } finally {
       await server.close();
       await client.close();
