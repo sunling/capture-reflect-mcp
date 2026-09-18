@@ -36,6 +36,11 @@ describe("capture routing metadata", () => {
       expect(journal.description).toContain("not technical debugging");
       expect(journal.description).toContain("Automatically");
       expect(note.description).toContain("recording system");
+      expect(note.inputSchema.required).toContain("originalNote");
+      expect(note.inputSchema.properties).not.toHaveProperty("content");
+      expect(note.inputSchema.properties.source.properties).toHaveProperty("url");
+      expect(note.inputSchema.properties.relatedEntries.maxItems).toBe(3);
+      expect(note.inputSchema.properties.possibleActions.maxItems).toBe(5);
       expect(update.description).toContain("journal or note");
       expect(update.inputSchema.properties.mode.enum).toEqual(["append", "replace"]);
       expect(listing.tools.some((tool: any) => tool.name === "update_note")).toBe(false);

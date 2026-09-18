@@ -79,8 +79,8 @@ describe("Bubble Breaker MCP integration", () => {
       expect(result.isError).not.toBe(true);
       expect(result.structuredContent).toMatchObject({ from: "2026-09-01", to: "2026-09-07", timeZone: "Asia/Tokyo", records: [] });
       expect(result.structuredContent.instructions).toContain("## discover");
-      expect(result.structuredContent.instructions).toContain("generated YAML frontmatter as the canonical structured record");
-      expect(result.structuredContent.instructions).toContain("Do not repeat the resource title, URL, format, or completion timestamp");
+      expect(result.structuredContent.instructions).toContain("YAML stores the server-generated `id`");
+      expect(result.structuredContent.instructions).toContain("Do not repeat the resource title, URL, format, or completion timestamp inside `originalNote`");
       expect(result.structuredContent.instructions).toContain("one short localized completion marker");
       const resource = await request("resources/read", { uri: "skill://capture-reflect/bubble-breaker/SKILL.md" });
       expect(resource.contents[0].text).toBe(result.structuredContent.instructions);

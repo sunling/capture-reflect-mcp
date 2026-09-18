@@ -29,13 +29,31 @@ export interface CaptureJournalInput {
   attachments?: RecordAttachment[];
 }
 
+export interface NoteSource {
+  title?: string | undefined;
+  author?: string | undefined;
+  url?: string | undefined;
+  type?: string | undefined;
+}
+
+export interface RelatedRecordEntry {
+  type: "journal" | "note";
+  path: string;
+  date: string;
+  excerpt: string;
+  possibleConnection: string;
+}
+
 export interface CaptureNoteInput {
   date: string;
   title: string;
   keyword: string;
-  content: string;
+  originalNote: string;
+  source?: NoteSource;
+  relatedEntries?: RelatedRecordEntry[];
+  furtherReflection?: string;
+  possibleActions?: string[];
   tags?: string[];
-  source?: string;
   attachments?: RecordAttachment[];
 }
 

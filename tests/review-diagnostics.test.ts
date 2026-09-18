@@ -20,8 +20,8 @@ describe("Review failure diagnostics through MCP", () => {
   beforeEach(async () => {
     root = await fs.mkdtemp(path.join(os.tmpdir(), "review-diagnostics-"));
     store = new LocalRecordsStore(root);
-    currentPath = (await store.captureNote({ date: "2026-09-10", title: "本周", keyword: "本周", content: "Private current evidence." })).path;
-    historicalPath = (await store.captureNote({ date: "2026-09-07", title: "Earlier", keyword: "earlier", content: "Private earlier evidence." })).path;
+    currentPath = (await store.captureNote({ date: "2026-09-10", title: "本周", keyword: "本周", originalNote: "Private current evidence." })).path;
+    historicalPath = (await store.captureNote({ date: "2026-09-07", title: "Earlier", keyword: "earlier", originalNote: "Private earlier evidence." })).path;
   });
 
   afterEach(async () => {
