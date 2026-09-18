@@ -226,7 +226,7 @@ export class GitHubRecordsStore implements RecordsStore {
         filePath,
         buildNoteDocument({
           ...note,
-          content: imageMarkdown ? `${note.content.trim()}\n\n${imageMarkdown}` : note.content,
+          originalNote: imageMarkdown ? `${note.originalNote}\n\n${imageMarkdown}` : note.originalNote,
         }),
         `capture-reflect: save note for ${note.date}`,
       );

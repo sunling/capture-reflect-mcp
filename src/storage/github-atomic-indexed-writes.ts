@@ -139,7 +139,7 @@ class AtomicIndexedWriter {
       const imageMarkdown = attachmentMarkdown(attachments.stored);
       const content = buildNoteDocument({
         ...note,
-        content: imageMarkdown ? `${note.content.trim()}\n\n${imageMarkdown}` : note.content,
+        originalNote: imageMarkdown ? `${note.originalNote}\n\n${imageMarkdown}` : note.originalNote,
       });
       const additions = [...attachments.additions, this.#textAddition(filePath, content)];
       await this.#addAtomicIndexUpdate(snapshot, filePath, content, additions);

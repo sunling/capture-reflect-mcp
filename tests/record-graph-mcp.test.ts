@@ -12,7 +12,7 @@ it("exposes read-only backlinks for files created without the MCP", async () => 
   const server = createServer(store, "UTC");
   const [client, transport] = InMemoryTransport.createLinkedPair();
   try {
-    const note = await store.captureNote({ date: "2026-09-16", title: "行动", keyword: "行动", content: "# 行动\n\n当时的想法。" });
+    const note = await store.captureNote({ date: "2026-09-16", title: "行动", keyword: "行动", originalNote: "当时的想法。" });
     const legacyPath = "journals/2026/202609/20260916-手写.md";
     await fs.mkdir(path.join(root, path.dirname(legacyPath)), { recursive: true });
     await fs.writeFile(path.join(root, legacyPath), `[关联](../../../${note.path.split("/").map(encodeURIComponent).join("/")})\n`);

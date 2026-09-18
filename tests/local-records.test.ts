@@ -18,7 +18,7 @@ describe("LocalRecordsStore", () => {
   });
 
   it("saves reviews with one metadata inventory and no duplicated source footer", async () => {
-    const note = await store.captureNote({ date: "2026-09-01", title: "散步", keyword: "散步", content: "A walk helped me focus." });
+    const note = await store.captureNote({ date: "2026-09-01", title: "散步", keyword: "散步", originalNote: "A walk helped me focus." });
     const input = { date: "2026-09-14", from: "2026-09-01", to: "2026-09-07", title: "Weekly review", keyword: "weekly", content: "## Interpretation (AI)\nWalking may help focus.\n\n## Questions\nDoes this recur?", sourcePaths: [note.path] };
     const result = await store.saveReview(input);
     expect(result).toEqual({ path: "reviews/2026/202609/20260901-20260907-weekly.md", action: "created" });
@@ -68,7 +68,7 @@ describe("LocalRecordsStore", () => {
   });
 
   it("names reviews by range and topic while reading new and legacy reviews by save date", async () => {
-    const note = await store.captureNote({ date: "2026-09-05", title: "计划", keyword: "计划", content: "Original evidence" });
+    const note = await store.captureNote({ date: "2026-09-05", title: "计划", keyword: "计划", originalNote: "Original evidence" });
     const saved = await store.saveReview({ date: "2026-10-02", from: "2026-09-05", to: "2026-09-11", title: "计划被打乱之后", keyword: "计划被打乱之后", content: "review-marker", sourcePaths: [note.path] });
     expect(saved.path).toBe("reviews/2026/202610/20260905-20260911-计划被打乱之后.md");
     const legacy = "reviews/2026/202610/20261002-legacy.md";
@@ -125,15 +125,64 @@ describe("LocalRecordsStore", () => {
       date: "2026-08-23",
       title: "Energetic charge",
       keyword: "生命力",
-      source: "The Creative Act",
+      source: { title: "The Creative Act" },
       tags: ["阅读", "创作"],
-      content: "## 为什么此刻想留下\n\n我在想作品是否能代表我正在经历的。",
+      originalNote: "我在想作品是否能代表我正在经历的。",
     });
     const records = await store.getRecords({ from: "2026-08-23", to: "2026-08-23" });
 
     expect(created.path).toBe("notes/2026/202608/20260823-生命力.md");
     expect(records).toHaveLength(1);
-    expect(records[0]?.content).toContain('source: "The Creative Act"');
+    expect(records[0]?.content).not.toContain('source: "The Creative Act"');
+    expect(records[0]?.content).toContain("## 来源");
+    expect(records[0]?.content).toContain("The Creative Act");
+  });
+
+  it("renders structured note sections and keeps AI additions separate from original words", async () => {
+    const created = await store.captureNote({
+      date: "2026-09-18",
+      title: "记录系统的结构",
+      keyword: "笔记结构",
+      originalNote: "我想让笔记既保留原话，也能连接以前的记录。",
+      source: {
+        title: "Capture & Reflect",
+        author: "Sun Ling",
+        url: "https://example.com/capture-reflect",
+        type: "项目",
+      },
+      relatedEntries: [
+        {
+          type: "journal",
+          path: "journals/2026/202609/20260917.md",
+          date: "2026-09-17",
+          excerpt: "整理了一下我的记录系统。",
+          possibleConnection: "这延续了对记录结构的调整。",
+        },
+        {
+          type: "note",
+          path: "notes/2026/202609/20260916-尽责性.md",
+          date: "2026-09-16",
+          excerpt: "记录关于尽责性的思考。",
+          possibleConnection: "两篇笔记都在探索如何把思考转化为实践。",
+        },
+      ],
+      furtherReflection: "哪些结构真正帮助了回看？",
+      possibleActions: ["测试一次完整的笔记保存流程。", "观察相关记录是否真的有帮助。"],
+      tags: ["记录系统"],
+    });
+    const markdown = await fs.readFile(path.join(root, created.path), "utf8");
+
+    expect(markdown).toContain("## 原始笔记\n\n我想让笔记既保留原话，也能连接以前的记录。");
+    expect(markdown).toContain("## 来源");
+    expect(markdown).toContain("[Capture & Reflect](https://example.com/capture-reflect)");
+    expect(markdown).not.toMatch(/^source:/m);
+    expect(markdown).toContain("## 相关记录\n\n### 相关日记");
+    expect(markdown).toContain("### 相关笔记");
+    expect(markdown).toContain("../../../journals/2026/202609/20260917.md");
+    expect(markdown).toContain("../../../notes/2026/202609/20260916-%E5%B0%BD%E8%B4%A3%E6%80%A7.md");
+    expect(markdown).toContain("**可能的关联（AI）：**");
+    expect(markdown).toContain("## 进一步思考（AI）\n\n哪些结构真正帮助了回看？");
+    expect(markdown).toContain("## 可能的行动方向（AI）\n\n- 测试一次完整的笔记保存流程。");
   });
 
   it("creates the records directory tree on the first write", async () => {
@@ -144,7 +193,7 @@ describe("LocalRecordsStore", () => {
       date: "2026-08-27",
       title: "零配置记录",
       keyword: "开始",
-      content: "第一次写入时创建本地目录。",
+      originalNote: "第一次写入时创建本地目录。",
     });
 
     await expect(fs.readFile(path.join(newRoot, created.path), "utf8")).resolves.toContain(

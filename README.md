@@ -42,7 +42,7 @@ See the [portable knowledge graph design and MCP outage walkthrough](docs/portab
 The local server exposes seven record, graph, and context tools. The hosted service also exposes secure setup and account-switch tools:
 
 - `capture_journal`: create or append a personal journal entry fragment, with optional photos.
-- `capture_note`: save a Markdown note preserving the original text, with optional source, related journal entries, AI-labeled reflections, and photos.
+- `capture_note`: save a structured Markdown note preserving the original text, with optional body-only source details, related journals or notes, AI-labeled reflections and possible actions, and photos.
 - `get_records_by_date_range`: retrieve journals and notes, or saved reviews with `types: ["review"]` (filtered by save date).
 - `save_review`: save a review and validated source links under `reviews/`, without overwriting.
 - `search_records`: search journals and notes by default; use `types: ["review"]` for earlier reviews.
@@ -60,11 +60,11 @@ The MCP server handles access and storage. It publishes four focused Agent Skill
 
 ### Note capture workflow
 
-The capture skill keeps the user's text verbatim in an **Original note** section. **Source**, **Related journal entries**, and **Further reflection** are optional, with headings in the note's language. Any AI-generated connections or reflections are labeled separately from the original text.
+The capture skill passes the user's text verbatim as structured `originalNote`. The server renders an **Original note** section plus optional **Source**, **Related records**, **Further reflection (AI)**, and **Possible actions (AI)** sections, with headings in the note's language. Related records may be journals or notes. Source details are rendered only in the body, not duplicated in YAML.
 
-Before saving, the client starts with one focused `search_records` query restricted to journals and only runs another when the first result is clearly insufficient, with at most three searches total. It reads the results and includes up to three meaningful connections with dates, relative file links, and exact excerpts. Search currently matches literal text; it may miss related experiences expressed differently. Empty sections are omitted, and a failed lookup does not prevent saving the original note. Users can request another format or skip enrichment.
+Before saving, the client starts with one focused `search_records` query across journals and notes and only runs another when the first result is clearly insufficient, with at most three searches total. It reads the results and includes up to three meaningful connections total with verified dates, exact returned paths, and exact excerpts. Search currently matches literal text; it may miss related experiences or ideas expressed differently. Empty sections are omitted, and a failed lookup does not prevent saving the original note. Users can skip enrichment.
 
-This is a client workflow defined by the bundled skill and tool instructions. `capture_note` still accepts Markdown `content`; the storage layer does not automatically search, enforce sections, or rewrite existing notes.
+Search and connection selection remain a client workflow defined by the bundled skill and tool instructions. `capture_note` accepts structured fields rather than arbitrary Markdown, and the storage layer consistently renders the sections while preserving `originalNote` verbatim.
 
 Capture routing follows the intended subject rather than isolated trigger words. Lived experiences and feelings go to `capture_journal`; technical observations, measurements, product tests, debugging findings, and design decisions go to `capture_note`, even when they discuss journals or the recording workflow itself. An explicit request to save something as a journal overrides the inferred subject.
 
@@ -78,7 +78,7 @@ The first search creates the index. Later searches validate per-shard digests ag
 
 Ask “Surprise me with something new.” The client explores varied domains and sources with its own web tools, independently of inferred interests. Before recommending one verified resource, it uses `get_bubble_breaker_context` and focused `search_records` queries to filter familiar territory and repeats. History filters candidates; it does not determine every destination. The MCP does not browse or generate recommendations itself. Other modes are `challenge`, `blindspot`, `connect`, and `socratic`.
 
-Recommendations stay in chat. Once you explicitly report completion, the client checks notes for an existing completion and saves a minimal record through `capture_note`, using the single stable `bubble-breaker` tag and no automatic journal enrichment or required summary. The generated YAML frontmatter holds the stable ID, factual resource title, resolved date, canonical URL when known, and tag; the Markdown body does not repeat those fields or add format and timestamp bookkeeping. It preserves user-supplied thoughts verbatim, or uses one short localized completion marker because `capture_note.content` cannot be empty. The configured time zone replaces the reference skill's fixed time zone. Search-based duplicate checks are not atomic; existing notes cannot be appended, so an explicitly requested repeat completion can be saved separately. Scheduling requires a supported client.
+Recommendations stay in chat. Once you explicitly report completion, the client checks notes for an existing completion and saves a minimal record through `capture_note`, using the single stable `bubble-breaker` tag and no automatic record enrichment or required summary. The generated YAML frontmatter holds the stable ID, factual resource title, resolved date, and tag; structured source details, including a canonical URL when known, appear in the Markdown body. It preserves user-supplied thoughts verbatim, or uses one short localized completion marker because `capture_note.originalNote` cannot be empty. The configured time zone replaces the reference skill's fixed time zone. Search-based duplicate checks are not atomic; existing notes cannot be appended, so an explicitly requested repeat completion can be saved separately. Scheduling requires a supported client.
 
 ## Terminology
 

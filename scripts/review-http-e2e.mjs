@@ -123,10 +123,10 @@ try {
     expectedPreviousPaths = fixture.previous.map((record) => record.path);
   } else {
     const earlier = await successful("capture_note", {
-      date: "2026-09-07", title: "上周", keyword: "上周", content: "## 原始笔记\n上周的比较材料。",
+      date: "2026-09-07", title: "上周", keyword: "上周", originalNote: "上周的比较材料。",
     }, "capture earlier note");
     const current = await successful("capture_note", {
-      date: "2026-09-10", title: "本周", keyword: "本周", content: "## 原始笔记\n散步后更容易专注。",
+      date: "2026-09-10", title: "本周", keyword: "本周", originalNote: "散步后更容易专注。",
     }, "capture current note");
     const journal = await successful("capture_journal", {
       date: "2026-09-14", title: "星期日", keyword: "星期日", content: "今天在公园散步。",

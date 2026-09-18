@@ -51,7 +51,7 @@ describe("unified journal and note editing", () => {
     tempDirectories.push(root);
     const store = withRecordEditing(new LocalRecordsStore(root), { kind: "local", root });
     const created = kind === "note"
-      ? await store.captureNote({ date: "2026-09-16", title: "沉香", keyword: "沉香", content: "## 原始笔记\n\n第一次记录。" })
+      ? await store.captureNote({ date: "2026-09-16", title: "沉香", keyword: "沉香", originalNote: "第一次记录。" })
       : await store.captureJournal({ date: "2026-09-16", title: "早晨", keyword: "散步", content: "第一次记录。" });
     const appended = await store.updateRecord!({ path: created.path, mode: "append", content: "### 补充\n\n木炭的故事。" });
     expect(appended).toEqual({ path: created.path, action: "appended" });

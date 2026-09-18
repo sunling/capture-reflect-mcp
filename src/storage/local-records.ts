@@ -139,7 +139,7 @@ export class LocalRecordsStore implements RecordsStore {
     const imageMarkdown = attachmentMarkdown(storedAttachments);
     const document = buildNoteDocument({
       ...note,
-      content: imageMarkdown ? `${note.content.trim()}\n\n${imageMarkdown}` : note.content,
+      originalNote: imageMarkdown ? `${note.originalNote}\n\n${imageMarkdown}` : note.originalNote,
     });
 
     await fs.writeFile(filePath, document, { encoding: "utf8", flag: "wx" });

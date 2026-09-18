@@ -1,6 +1,11 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import type { CaptureJournalInput, CaptureNoteInput } from "./records-store.js";
+import type {
+  CaptureJournalInput,
+  CaptureNoteInput,
+  NoteSource,
+  RelatedRecordEntry,
+} from "./records-store.js";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const SAFE_KEYWORD_PATTERN = /^[\p{L}\p{M}\p{N}_-]{1,40}$/u;
@@ -97,16 +102,167 @@ export function attachmentMarkdown(
     .join("\n\n");
 }
 
+type NoteLocale = "en" | "zh" | "ja" | "ko";
+
+const NOTE_LABELS = {
+  en: {
+    originalNote: "Original note",
+    source: "Source",
+    sourceTitle: "Title",
+    sourceAuthor: "Author / source",
+    sourceType: "Type",
+    sourceLink: "Link",
+    relatedRecords: "Related records",
+    relatedJournals: "Related journal entries",
+    relatedNotes: "Related notes",
+    journal: "Journal",
+    note: "Note",
+    possibleConnection: "Possible connection (AI)",
+    furtherReflection: "Further reflection (AI)",
+    possibleActions: "Possible actions (AI)",
+  },
+  zh: {
+    originalNote: "原始笔记",
+    source: "来源",
+    sourceTitle: "标题",
+    sourceAuthor: "作者 / 来源",
+    sourceType: "类型",
+    sourceLink: "链接",
+    relatedRecords: "相关记录",
+    relatedJournals: "相关日记",
+    relatedNotes: "相关笔记",
+    journal: "日记",
+    note: "笔记",
+    possibleConnection: "可能的关联（AI）",
+    furtherReflection: "进一步思考（AI）",
+    possibleActions: "可能的行动方向（AI）",
+  },
+  ja: {
+    originalNote: "元のメモ",
+    source: "出典",
+    sourceTitle: "タイトル",
+    sourceAuthor: "著者 / 出典",
+    sourceType: "種類",
+    sourceLink: "リンク",
+    relatedRecords: "関連する記録",
+    relatedJournals: "関連する日記",
+    relatedNotes: "関連するメモ",
+    journal: "日記",
+    note: "メモ",
+    possibleConnection: "考えられる関連（AI）",
+    furtherReflection: "さらなる考察（AI）",
+    possibleActions: "考えられる行動（AI）",
+  },
+  ko: {
+    originalNote: "원본 메모",
+    source: "출처",
+    sourceTitle: "제목",
+    sourceAuthor: "저자 / 출처",
+    sourceType: "유형",
+    sourceLink: "링크",
+    relatedRecords: "관련 기록",
+    relatedJournals: "관련 일기",
+    relatedNotes: "관련 메모",
+    journal: "일기",
+    note: "메모",
+    possibleConnection: "가능한 연관성(AI)",
+    furtherReflection: "추가 성찰(AI)",
+    possibleActions: "가능한 행동(AI)",
+  },
+} as const;
+
+function noteLocale(note: CaptureNoteInput): NoteLocale {
+  const text = `${note.title}\n${note.originalNote}`;
+  if (/[ぁ-ゟ゠-ヿ]/u.test(text)) return "ja";
+  if (/[가-힣]/u.test(text)) return "ko";
+  if (/\p{Script=Han}/u.test(text)) return "zh";
+  return "en";
+}
+
+function markdownSource(source: NoteSource, locale: NoteLocale): string {
+  const labels = NOTE_LABELS[locale];
+  const separator = locale === "zh" || locale === "ja" ? "：" : ":";
+  const lines: string[] = [];
+  if (source.title) {
+    const title = source.url ? `[${source.title.trim()}](${source.url.trim()})` : source.title.trim();
+    lines.push(`- **${labels.sourceTitle}${separator}** ${title}`);
+  }
+  if (source.author) lines.push(`- **${labels.sourceAuthor}${separator}** ${source.author.trim()}`);
+  if (source.type) lines.push(`- **${labels.sourceType}${separator}** ${source.type.trim()}`);
+  if (source.url && !source.title) lines.push(`- **${labels.sourceLink}${separator}** ${source.url.trim()}`);
+  return lines.join("\n");
+}
+
+function markdownRelatedEntries(entries: RelatedRecordEntry[], locale: NoteLocale): string {
+  const labels = NOTE_LABELS[locale];
+  const separator = locale === "zh" || locale === "ja" ? "：" : ":";
+  const groups = ["journal", "note"] as const;
+  return groups.flatMap((type) => {
+    const matches = entries.filter((entry) => entry.type === type);
+    if (matches.length === 0) return [];
+    const heading = type === "journal" ? labels.relatedJournals : labels.relatedNotes;
+    const typeLabel = type === "journal" ? labels.journal : labels.note;
+    const body = matches.map((entry) => [
+      `- [${entry.date} · ${typeLabel}](../../../${entry.path.trim().split("/").map(encodeURIComponent).join("/")})`,
+      `  > ${entry.excerpt.trim().replaceAll("\n", "\n  > ")}`,
+      "",
+      `  **${labels.possibleConnection}${separator}** ${entry.possibleConnection.trim()}`,
+    ].join("\n")).join("\n\n");
+    return [`### ${heading}\n\n${body}`];
+  }).join("\n\n");
+}
+
+function markdownActions(actions: string[]): string {
+  return actions.map((action) => `- ${action.trim().replaceAll("\n", "\n  ")}`).join("\n");
+}
+
+function assertStructuredNote(note: CaptureNoteInput): void {
+  if (!note.originalNote.trim()) throw new Error("originalNote must not be blank.");
+  if ((note.relatedEntries?.length ?? 0) > 3) throw new Error("relatedEntries supports at most three records.");
+  for (const entry of note.relatedEntries ?? []) {
+    assertDate(entry.date);
+    const segments = entry.path.split("/");
+    const expectedRoot = entry.type === "journal" ? "journals" : "notes";
+    if (segments[0] !== expectedRoot || segments.some((segment) => !segment || segment === "." || segment === "..") || !entry.path.endsWith(".md")) {
+      throw new Error(`Invalid related ${entry.type} path: ${entry.path}.`);
+    }
+    if (!entry.excerpt.trim() || !entry.possibleConnection.trim()) {
+      throw new Error("Related entries require an excerpt and possibleConnection.");
+    }
+  }
+  if ((note.possibleActions?.length ?? 0) > 5 || note.possibleActions?.some((action) => !action.trim())) {
+    throw new Error("possibleActions supports up to five non-blank suggestions.");
+  }
+}
+
 export function buildNoteDocument(note: CaptureNoteInput): string {
+  assertStructuredNote(note);
   const tags = note.tags?.filter(Boolean).slice(0, 3) ?? [];
+  const locale = noteLocale(note);
+  const labels = NOTE_LABELS[locale];
   const frontmatter = [
     "---",
     `id: ${createRecordId()}`,
     `title: ${JSON.stringify(note.title.trim())}`,
     `date: ${note.date}`,
-    ...(note.source ? [`source: ${JSON.stringify(note.source.trim())}`] : []),
     ...(tags.length > 0 ? ["tags:", ...tags.map((tag) => `  - ${JSON.stringify(tag)}`)] : []),
     "---",
   ].join("\n");
-  return `${frontmatter}\n\n${note.content.trim()}\n`;
+  const sections = [
+    `## ${labels.originalNote}\n\n${note.originalNote}`,
+  ];
+  if (note.source) {
+    const source = markdownSource(note.source, locale);
+    if (source) sections.push(`## ${labels.source}\n\n${source}`);
+  }
+  if (note.relatedEntries?.length) {
+    sections.push(`## ${labels.relatedRecords}\n\n${markdownRelatedEntries(note.relatedEntries, locale)}`);
+  }
+  if (note.furtherReflection?.trim()) {
+    sections.push(`## ${labels.furtherReflection}\n\n${note.furtherReflection.trim()}`);
+  }
+  if (note.possibleActions?.some((action) => action.trim())) {
+    sections.push(`## ${labels.possibleActions}\n\n${markdownActions(note.possibleActions.filter((action) => action.trim()))}`);
+  }
+  return `${frontmatter}\n\n${sections.join("\n\n")}\n`;
 }

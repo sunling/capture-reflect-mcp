@@ -129,8 +129,8 @@ describe("GitHubRecordsStore", () => {
   it("rejects mixed review ranges before writing, then saves the same body with exact in-range paths", async () => {
     const api = new FakeGitHubApi();
     const store = createStore(api);
-    await store.captureNote({ date: "2026-09-07", title: "Earlier", keyword: "earlier", content: "Earlier evidence." });
-    await store.captureNote({ date: "2026-09-10", title: "本周", keyword: "本周", content: "Current evidence." });
+    await store.captureNote({ date: "2026-09-07", title: "Earlier", keyword: "earlier", originalNote: "Earlier evidence." });
+    await store.captureNote({ date: "2026-09-10", title: "本周", keyword: "本周", originalNote: "Current evidence." });
     const previous = await store.getRecords({ from: "2026-09-01", to: "2026-09-07" });
     const current = await store.getRecords({ from: "2026-09-08", to: "2026-09-14" });
     const review = {
@@ -153,7 +153,7 @@ describe("GitHubRecordsStore", () => {
   it("saves reviews with a single metadata inventory without mixing them into default reads or overwriting", async () => {
     const api = new FakeGitHubApi();
     const store = createStore(api);
-    const note = await store.captureNote({ date: "2026-09-01", title: "散步", keyword: "散步", content: "A walk helped me focus." });
+    const note = await store.captureNote({ date: "2026-09-01", title: "散步", keyword: "散步", originalNote: "A walk helped me focus." });
     const input = { date: "2026-09-14", from: "2026-09-01", to: "2026-09-07", title: "Weekly review", keyword: "weekly", content: "## Interpretation (AI)\nWalking may help focus.\n\n## Questions\nDoes this recur?", sourcePaths: [note.path] };
     const result = await store.saveReview(input);
     expect(result).toEqual({ path: "reviews/2026/202609/20260901-20260907-weekly.md", action: "created" });
@@ -254,7 +254,7 @@ describe("GitHubRecordsStore", () => {
       date: "2026-08-31",
       title: "一篇文章",
       keyword: "文章",
-      content: "值得保留。",
+      originalNote: "值得保留。",
     };
 
     await store.captureNote(note);
@@ -274,7 +274,7 @@ describe("GitHubRecordsStore", () => {
       date: "2026-08-31",
       title: "创作",
       keyword: "创作",
-      content: "作品也许带着生命力。",
+      originalNote: "作品也许带着生命力。",
     });
     api.files.set("PROFILE.md", { content: Buffer.from("生命力"), sha: "outside" });
 

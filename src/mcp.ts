@@ -63,7 +63,7 @@ export function createServer(
     { name: "capture-reflect", version: "0.6.0" },
     {
       instructions:
-        "Choose capture_journal or capture_note based on the intended subject, not trigger words. Use capture_journal for lived experiences, feelings, events, or daily reflections; it creates a journal or automatically appends a new fragment for the same date. Use capture_note to create a new note for knowledge, encountered material, quotations, technical observations, measurements, product tests, design decisions, and ideas. When a user explicitly wants to add to or correct an existing journal or note, use update_record: first search/read the exact target path, then append new material or replace one uniquely matching exact excerpt. Do not create a duplicate note because its path exists. For example '记录日记时 durationMs 是 6685' is a technical note, not a journal, unless the user explicitly requests a journal. Journal and note content may be in any language; preserve the original language, wording, uncertainty, code-switching, and original note text verbatim; never translate unless requested. Keep AI connections and reflections separate and explicitly labeled. Reply in the language of the current request. When the user says today or gives no date, omit the date argument to use the server-configured time zone; supply dates only when explicitly specified. After a successful capture or edit, present recordUrl as a clickable Markdown link when returned. Read records before reviews or questions about prior records; follow review-records and save_review for requested saved reviews. Treat prior review interpretations as distinct from original evidence. Use get_record_connections to inspect source-derived Markdown links and backlinks without modifying user records; IDs are optional and ordinary Markdown links remain the portable format. To switch GitHub accounts use get_github_account_switch_link; to set up GitHub, change repositories or update the time zone use get_github_setup_link, not the AI client's reconnect action.",
+        "Choose capture_journal or capture_note based on the intended subject, not trigger words. Use capture_journal for lived experiences, feelings, events, or daily reflections; it creates a journal or automatically appends a new fragment for the same date. Use capture_note to create a new note for knowledge, encountered material, quotations, technical observations, measurements, product tests, design decisions, and ideas. When a user explicitly wants to add to or correct an existing journal or note, use update_record: first search/read the exact target path, then append new material or replace one uniquely matching exact excerpt. Do not create a duplicate note because its path exists. For example '记录日记时 durationMs 是 6685' is a technical note, not a journal, unless the user explicitly requests a journal. Journal and note content may be in any language; preserve the original language, wording, uncertainty, code-switching, and original note text verbatim; never translate unless requested. Keep AI connections, reflections, and possible actions separate and explicitly labeled. Reply in the language of the current request. When the user says today or gives no date, omit the date argument to use the server-configured time zone; supply dates only when explicitly specified. After a successful capture or edit, present recordUrl as a clickable Markdown link when returned. Read records before reviews or questions about prior records; follow review-records and save_review for requested saved reviews. Treat prior review interpretations as distinct from original evidence. Use get_record_connections to inspect source-derived Markdown links and backlinks without modifying user records; IDs are optional and ordinary Markdown links remain the portable format. To switch GitHub accounts use get_github_account_switch_link; to set up GitHub, change repositories or update the time zone use get_github_setup_link, not the AI client's reconnect action.",
     },
   );
 
@@ -177,14 +177,28 @@ export function createServer(
     {
       title: "Create a note",
       description:
-        "Create a note in any language when the user asks to keep an article, book, podcast, video, course, conversation, quotation, link, something learned, technical observation, debugging finding, measurement, product test, design decision, or idea. Use update_record for additions or corrections to an existing note; locate its exact path first. The recording system itself is a note subject even if the content contains journal or 日记. Preserve the user's original text verbatim under Original note and include optional Source, Related journal entries, and Further reflection in the note's language. Unless skipped, search_records once with types: ['journal'], making at most three focused searches, and include up to three genuine connections with verified dates, relative links, exact excerpts, and explanations labeled Possible connection (AI). Label AI reflections as AI and omit empty sections. If lookup fails, save the original and disclose the failure. Honor explicitly requested formatting. Supplied Markdown is stored as-is; this tool does not automatically search or structure it. After saving show recordUrl if returned.",
+        "Create a structured note in any language when the user asks to keep an article, book, podcast, video, course, conversation, quotation, link, something learned, technical observation, debugging finding, measurement, product test, design decision, or idea. Use update_record for additions or corrections to an existing note; locate its exact path first. The recording system itself is a note subject even if the content contains journal or 日记. Preserve the user's original text verbatim in originalNote. Unless skipped, search_records with types: ['journal', 'note'], making at most three focused searches, and include at most three genuine relatedEntries total with verified dates, relative links, exact excerpts, and possible AI connections. Add furtherReflection or possibleActions only when useful; the server labels both as AI-generated and omits empty sections. If lookup fails, save the original and disclose the failure. The server generates consistent localized Markdown and keeps source details in the body rather than YAML. After saving show recordUrl if returned.",
       inputSchema: z.object({
         date: z.string().optional().describe("YYYY-MM-DD. Omit for today or unspecified date; the server uses its configured time zone. Supply only for an explicitly specified calendar date."),
         title: z.string().min(1).describe("Title in the user's original language"),
         keyword: z.string().min(1).max(40).describe("Short filename keyword in the user's language; Unicode letters, combining marks, numbers, underscores and hyphens are supported"),
-        content: z.string().min(1).describe("Markdown with the user's original text verbatim under an Original note heading; optional verified Source, Related journal entries, and explicitly AI-labeled Further reflection. Use the note's language; omit empty optional sections and honor explicit formatting requests."),
+        originalNote: z.string().min(1).refine((value) => value.trim().length > 0, "originalNote must not be blank").describe("The user's original note text verbatim, without a heading, reorganization, translation, or AI additions"),
+        source: z.object({
+          title: z.string().min(1).optional(),
+          author: z.string().min(1).optional(),
+          url: z.string().url().optional(),
+          type: z.string().min(1).optional(),
+        }).refine((value) => Object.values(value).some(Boolean), "Source must contain at least one field").optional().describe("Optional source details rendered in the note body, not YAML"),
+        relatedEntries: z.array(z.object({
+          type: z.enum(["journal", "note"]),
+          path: z.string().regex(/^(?:journals|notes)\/(?!.*(?:^|\/)\.\.?(?:\/|$)).+\.md$/).describe("Exact repository-root-relative path returned by a read or search tool"),
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).describe("Verified YYYY-MM-DD record date"),
+          excerpt: z.string().min(1).describe("Short exact excerpt from the related record"),
+          possibleConnection: z.string().min(1).describe("A tentative AI-authored explanation of the connection"),
+        })).max(3).optional().describe("Up to three verified related journals or notes total"),
+        furtherReflection: z.string().min(1).optional().describe("Optional AI-authored questions or observations; the server labels them as AI-generated"),
+        possibleActions: z.array(z.string().min(1)).max(5).optional().describe("Optional tentative AI suggestions, never user commitments; the server labels them as AI-generated"),
         tags: z.array(z.string().min(1)).max(3).optional(),
-        source: z.string().min(1).optional().describe("Source title or URL when available"),
         attachments: z.array(fileParamSchema).max(5).optional().describe("Optional image files supplied by the AI client"),
       }),
       outputSchema: z.object({
@@ -196,7 +210,7 @@ export function createServer(
       _meta: { "openai/fileParams": ["attachments"] },
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
     },
-    async ({ date, title, keyword, content, tags, source, attachments }) => {
+    async ({ date, title, keyword, originalNote, source, relatedEntries, furtherReflection, possibleActions, tags, attachments }) => {
       const images = attachments?.length
         ? await (await import("./attachments.js")).downloadImageAttachments(attachments)
         : [];
@@ -205,9 +219,12 @@ export function createServer(
           date: date ?? currentDate(timeZone),
           title,
           keyword,
-          content,
+          originalNote,
           ...(tags ? { tags } : {}),
           ...(source ? { source } : {}),
+          ...(relatedEntries ? { relatedEntries } : {}),
+          ...(furtherReflection ? { furtherReflection } : {}),
+          ...(possibleActions ? { possibleActions } : {}),
           ...(images.length > 0 ? { attachments: images } : {}),
         })),
       });

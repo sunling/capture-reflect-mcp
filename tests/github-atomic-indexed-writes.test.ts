@@ -182,7 +182,7 @@ describe("atomic indexed GitHub writes", () => {
       date: "2026-09-16",
       title: "New note",
       keyword: "new-note",
-      content: "new content",
+      originalNote: "new content",
     });
 
     expect(api.commitMutations).toBe(1);
@@ -201,7 +201,7 @@ describe("atomic indexed GitHub writes", () => {
       date: "2026-09-14",
       title: "Atomic note",
       keyword: "atomic-note",
-      content: "atomic testing phrase",
+      originalNote: "atomic testing phrase",
       attachments: [
         {
           data: new Uint8Array([1, 2, 3]),
