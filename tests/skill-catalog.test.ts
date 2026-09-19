@@ -42,4 +42,13 @@ describe("Skill catalog", () => {
     expect(capture.content).toContain("Once answered, proceed with the pending text and do not ask again");
     expect(capture.content).toContain("Never require users to select a folder on every capture");
   });
+
+  it("limits Bubble Breaker routing to deliberate exploration, not demo advice", () => {
+    const bubble = loadSkillCatalog().find((skill) => skill.frontmatter.name === "bubble-breaker")!;
+    expect(bubble.frontmatter.description).toContain("intentional information-bubble exploration");
+    expect(bubble.content).toContain("Only use this skill when the user deliberately asks");
+    expect(bubble.content).toContain("How can I present my tool and demo in 5 mins?");
+    expect(bubble.content).toContain("Do not trigger Bubble Breaker for generic brainstorming");
+    expect(bubble.content).toContain("Do not apply these defaults to unrelated conversations");
+  });
 });
