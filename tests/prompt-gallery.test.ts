@@ -16,7 +16,7 @@ describe("prompt gallery", () => {
     for (const [i, row] of rows.entries()) {
       const cells = row.split("|").map((cell) => cell.trim()).filter(Boolean);
       expect(cells[0]).toContain(workflows[i]);
-      const examples = cells[1].split(" · ");
+      const examples = (cells[1] ?? "").split(" · ");
       expect(examples).toHaveLength(5);
       for (const example of examples) {
         expect(example.length).toBeLessThanOrEqual(64);
