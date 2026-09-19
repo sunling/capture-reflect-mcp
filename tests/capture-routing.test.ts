@@ -33,6 +33,8 @@ describe("capture routing metadata", () => {
       const journal = listing.tools.find((tool: any) => tool.name === "capture_journal");
       const note = listing.tools.find((tool: any) => tool.name === "capture_note");
       const update = listing.tools.find((tool: any) => tool.name === "update_record");
+      const getRange = listing.tools.find((tool: any) => tool.name === "get_records_by_date_range");
+      const search = listing.tools.find((tool: any) => tool.name === "search_records");
       expect(journal.description).toContain("not technical debugging");
       expect(journal.description).toContain("Automatically");
       expect(note.description).toContain("recording system");
@@ -45,13 +47,19 @@ describe("capture routing metadata", () => {
       expect(update.inputSchema.properties.mode.enum).toEqual(["append", "replace"]);
       expect(listing.tools.some((tool: any) => tool.name === "update_note")).toBe(false);
 
-      // The model sees these descriptions even when it does not fetch the bundled Skill.
+      // These descriptions remain visible even if the client does not fetch the bundled Skill.
       expect(journal.description).toContain("explicitly asks to journal");
       expect(journal.description).toContain("entry mentions books");
       expect(journal.description).toContain("ask them to share it before calling this tool");
       expect(note.description).toContain("Explicit journal or diary requests ALWAYS go to capture_journal");
       expect(note.description).toContain("ask whether to save as journal or note and wait before writing");
       expect(note.description).toContain("Do not save a request to start journaling");
+
+      expect(journal.description).toContain("during an ongoing journaling conversation");
+      expect(journal.description).toContain("ask one brief action question before any read or write");
+      expect(note.description).toContain("First determine whether the user wants capture at all");
+      expect(getRange.description).toContain("a journal narrative mentioning existing notes does not by itself request retrieval");
+      expect(search.description).toContain("not merely because a journal entry mentions past notes or a meeting");
     } finally {
       await server.close();
       await client.close();
