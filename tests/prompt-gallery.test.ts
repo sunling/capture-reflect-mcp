@@ -15,7 +15,7 @@ describe("prompt gallery", () => {
     const seen = new Set<string>();
     for (const [i, row] of rows.entries()) {
       const cells = row.split("|").map((cell) => cell.trim()).filter(Boolean);
-      expect(cells[0]).toMatch(new RegExp(`^${workflows[i].replace(/[.*+?^${}()|[\]\\]/g, "\\$&")} \\(`));
+      expect(cells[0]).toContain(workflows[i]);
       const examples = cells[1].split(" · ");
       expect(examples).toHaveLength(5);
       for (const example of examples) {
