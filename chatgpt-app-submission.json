@@ -23,24 +23,24 @@
     "capture_journal": {
       "annotations": {
         "readOnlyHint": false,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "Creates a journal file or appends a fragment and optional processed images to the user's records repository.",
-        "open_world_justification": "Can commit journal content and images to a user-selected GitHub repository, which may be externally visible.",
+        "open_world_justification": "Writes only to the bounded GitHub repository selected and authorized by the user; it does not access open-ended external entities.",
         "destructive_justification": "Creates a new journal or appends a fragment without deleting or replacing existing journal content."
       }
     },
     "capture_note": {
       "annotations": {
         "readOnlyHint": false,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "Creates a Markdown note and optional processed images in the user's records repository.",
-        "open_world_justification": "Can commit note content and images to a user-selected GitHub repository, which may be externally visible.",
+        "open_world_justification": "Writes only to the bounded GitHub repository selected and authorized by the user; it does not access open-ended external entities.",
         "destructive_justification": "Creates a new note and refuses to overwrite an existing note at the same path."
       }
     },
@@ -83,12 +83,12 @@
     "save_review": {
       "annotations": {
         "readOnlyHint": false,
-        "openWorldHint": true,
+        "openWorldHint": false,
         "destructiveHint": false
       },
       "justifications": {
         "read_only_justification": "Creates a Markdown review with validated journal/note source references.",
-        "open_world_justification": "Can commit the review to the user-selected GitHub repository.",
+        "open_world_justification": "Writes only to the bounded GitHub repository selected and authorized by the user; it does not access open-ended external entities.",
         "destructive_justification": "Creates only; never overwrites an existing review or modifies source entries."
       }
     },
