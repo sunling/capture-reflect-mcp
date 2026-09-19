@@ -76,7 +76,7 @@ export function createServer(
     {
       title: "Get Bubble Breaker context",
       description:
-        "Get recent journals and notes plus the Bubble Breaker workflow for one unfamiliar resource, diverse perspectives, blind spots, cross-domain connections, Socratic questions, or recording a reported completion. Defaults to the last seven calendar days in the configured time zone. This read-only tool does not browse or generate recommendations; the client must verify external resources with web tools. Do not save recommendations as completed. For an explicit completion, follow the returned minimal capture_note workflow without automatic enrichment.",
+        "Only use when the user intentionally starts or continues a Bubble Breaker / information-bubble exploration workflow: discovering an unfamiliar resource, explicitly requesting Bubble Breaker perspectives, blind spots, cross-domain or Socratic modes, or reporting completion of a previously recommended resource. Returns recent journals and notes plus the Bubble Breaker workflow; defaults to the last seven calendar days in the configured time zone. Do NOT invoke for general brainstorming, emotional reflection, journaling, project planning, presentation preparation, or an ordinary question such as 'How can I present my tool and demo in 5 mins?' A mention of feeling anxious, a tool, or wanting new ideas is not a Bubble Breaker request. This read-only tool does not browse or generate recommendations; the client verifies external resources with web tools. Do not save recommendations as completed. For an explicit Bubble Breaker completion, follow the returned minimal capture_note workflow without automatic enrichment.",
       inputSchema: z.object({
         from: z.string().optional().describe("Inclusive YYYY-MM-DD start; provide with to, or omit both"),
         to: z.string().optional().describe("Inclusive YYYY-MM-DD end; provide with from, or omit both"),
@@ -128,7 +128,7 @@ export function createServer(
           repository: z.string().optional(),
           setupUrl: z.string().url(),
         }),
-        annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+        annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
       },
       async () => {
         const status = await setup.status();
