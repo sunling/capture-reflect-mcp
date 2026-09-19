@@ -22,4 +22,14 @@ describe("Skill catalog", () => {
       ]);
     }
   });
+
+  it("instructs clients to honor explicit intent and clarify only genuine ambiguity", () => {
+    const capture = loadSkillCatalog().find((skill) => skill.frontmatter.name === "capture-record")!;
+    expect(capture.content).toContain("Honor an explicit request to journal or write a diary");
+    expect(capture.content).toContain("Today, I would like to journal for today. In the morning");
+    expect(capture.content).toContain("Honor an explicit request to save a note");
+    expect(capture.content).toContain("Only if the type is genuinely ambiguous");
+    expect(capture.content).toContain("Do not call any write tool or default to notes while waiting");
+    expect(capture.content).toContain("without any substantive entry is not journal content");
+  });
 });
