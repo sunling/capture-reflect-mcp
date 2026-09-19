@@ -35,6 +35,7 @@ describe("capture routing metadata", () => {
       const update = listing.tools.find((tool: any) => tool.name === "update_record");
       const getRange = listing.tools.find((tool: any) => tool.name === "get_records_by_date_range");
       const search = listing.tools.find((tool: any) => tool.name === "search_records");
+      const bubble = listing.tools.find((tool: any) => tool.name === "get_bubble_breaker_context");
       expect(journal.description).toContain("not technical debugging");
       expect(journal.description).toContain("Automatically");
       expect(note.description).toContain("recording system");
@@ -60,6 +61,12 @@ describe("capture routing metadata", () => {
       expect(note.description).toContain("First determine whether the user wants capture at all");
       expect(getRange.description).toContain("a journal narrative mentioning existing notes does not by itself request retrieval");
       expect(search.description).toContain("not merely because a journal entry mentions past notes or a meeting");
+
+      // A request for five-minute demo advice must not trigger the Bubble Breaker workflow.
+      expect(bubble.description).toContain("Only use when the user intentionally starts or continues a Bubble Breaker");
+      expect(bubble.description).toContain("Do NOT invoke for general brainstorming, emotional reflection, journaling, project planning, presentation preparation");
+      expect(bubble.description).toContain("How can I present my tool and demo in 5 mins?");
+      expect(bubble.description).toContain("reporting completion of a previously recommended resource");
     } finally {
       await server.close();
       await client.close();
