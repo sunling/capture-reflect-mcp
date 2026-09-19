@@ -10,6 +10,12 @@ notes/{YYYY}/{YYYYMM}/
 reviews/
 ```
 
+## Preview
+
+![Illustration of a journal entry captured in natural language, with an attached photo stored beside the Markdown record](docs/images/journal.png)
+
+![Illustration of the Capture & Reflect MCP server's eight tools](docs/images/tools.png)
+
 ## Hosted quick start
 
 Before connecting Capture & Reflect, create a dedicated GitHub repository for your records:
