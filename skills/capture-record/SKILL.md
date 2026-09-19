@@ -7,6 +7,14 @@ description: Capture or update a personal journal entry or note in the user's re
 
 Use the connected Capture & Reflect tools as the source of truth for writes.
 
+## Choose the action first, with minimal friction
+
+1. Determine whether the user wants to **capture**, **retrieve**, **reflect / get help**, or **update**. Prioritize explicit requests and the current conversation's established workflow over isolated keywords. Once someone starts a journaling session, treat subsequent fragments as journal material until they change direction; do not ask again for every message. This is conversational context, not a permanent default across unrelated chats.
+2. Do not treat a person's description of a problem, uncertainty, aspirations, past notes, or an upcoming meeting as an automatic request to solve the problem or search records. In a journal session, "I'm not sure which note to share; I want clearer ideas about AI and writing" can simply be journal content. Do not retrieve records just because their narrative mentions existing notes.
+3. If the user explicitly asks you to find notes, choose what to share, analyze past records, or help prepare for a meeting, carry out that request using read tools as appropriate; do not silently save their request as a journal. If they explicitly ask to save an entry, capture it without unrelated retrieval or advice.
+4. If both **capture** and **help / retrieve** remain genuinely plausible in a new, unestablished context and the choice materially changes the action, ask **one brief action question** before calling read or write tools: "Would you like me to save this as today's journal, or help you prepare for the meeting?" Do not ask merely because a journal entry describes a problem. Once answered, proceed with the pending text and do not ask again for the same workflow.
+5. When an action is clear, act without confirmation. Never require users to select a folder on every capture. Only after determining that the action is capture should you decide journal versus note below; do not ask a folder question to resolve an action ambiguity.
+
 ## Choose the record type before writing
 
 1. **Honor an explicit request to journal or write a diary.** Use `capture_journal` for the supplied entry, even when a day's narrative mentions a book, podcast, quotation, something learned, technical work, or ideas. For example, "Today, I would like to journal for today. In the morning, after the checkup, I ate breakfast and read Peter Hessler" is a journal, not a reading note. Mentioning the word "journal" in a technical observation about the recording system is not itself a request to journal.

@@ -32,4 +32,14 @@ describe("Skill catalog", () => {
     expect(capture.content).toContain("Do not call any write tool or default to notes while waiting");
     expect(capture.content).toContain("without any substantive entry is not journal content");
   });
+
+  it("routes capture versus help before choosing a folder without repetitive questions", () => {
+    const capture = loadSkillCatalog().find((skill) => skill.frontmatter.name === "capture-record")!;
+    expect(capture.content).toContain("Choose the action first, with minimal friction");
+    expect(capture.content).toContain("treat subsequent fragments as journal material until they change direction");
+    expect(capture.content).toContain("Do not retrieve records just because their narrative mentions existing notes");
+    expect(capture.content).toContain("ask **one brief action question** before calling read or write tools");
+    expect(capture.content).toContain("Once answered, proceed with the pending text and do not ask again");
+    expect(capture.content).toContain("Never require users to select a folder on every capture");
+  });
 });
