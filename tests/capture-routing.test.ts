@@ -33,6 +33,7 @@ describe("capture routing metadata", () => {
       const journal = listing.tools.find((tool: any) => tool.name === "capture_journal");
       const note = listing.tools.find((tool: any) => tool.name === "capture_note");
       const update = listing.tools.find((tool: any) => tool.name === "update_record");
+      const saveReview = listing.tools.find((tool: any) => tool.name === "save_review");
       const getRange = listing.tools.find((tool: any) => tool.name === "get_records_by_date_range");
       const search = listing.tools.find((tool: any) => tool.name === "search_records");
       const bubble = listing.tools.find((tool: any) => tool.name === "get_bubble_breaker_context");
@@ -47,6 +48,15 @@ describe("capture routing metadata", () => {
       expect(update.description).toContain("journal or note");
       expect(update.inputSchema.properties.mode.enum).toEqual(["append", "replace"]);
       expect(listing.tools.some((tool: any) => tool.name === "update_note")).toBe(false);
+
+      // Writes stay within the user's selected GitHub repository, a bounded workspace.
+      for (const tool of [journal, note, update, saveReview]) {
+        expect(tool.annotations).toMatchObject({
+          readOnlyHint: false,
+          destructiveHint: false,
+          openWorldHint: false,
+        });
+      }
 
       // These descriptions remain visible even if the client does not fetch the bundled Skill.
       expect(journal.description).toContain("explicitly asks to journal");

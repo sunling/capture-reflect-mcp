@@ -154,7 +154,7 @@ export function createServer(
       }),
       outputSchema: captureResultSchema,
       _meta: { "openai/fileParams": ["attachments"] },
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     async ({ date, title, keyword, content, attachments }) => {
       const images = attachments?.length
@@ -208,7 +208,7 @@ export function createServer(
         recordUrl: z.string().url().optional(),
       }),
       _meta: { "openai/fileParams": ["attachments"] },
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     async ({ date, title, keyword, originalNote, source, relatedEntries, furtherReflection, possibleActions, tags, attachments }) => {
       const images = attachments?.length
@@ -248,7 +248,7 @@ export function createServer(
         action: z.enum(["appended", "updated"]),
         recordUrl: z.string().url().optional(),
       }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     async (input) => {
       if (!store.updateRecord) throw new Error("Record editing is unavailable in this records store.");
@@ -271,7 +271,7 @@ export function createServer(
         sourcePaths: z.array(z.string().min(1)).min(1).describe("Copy exact path values from journal/note records read within from/to. Do not reconstruct filenames or use Markdown-relative links. Keep out-of-range historical comparisons and earlier reviews as citations in content, not in sourcePaths. Stored as metadata and relative Markdown links."),
       }),
       outputSchema: z.object({ path: z.string(), action: z.literal("created") }),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     async ({ date, ...input }) => toolResult(await store.saveReview({ ...input, date: date ?? currentDate(timeZone) })),
   );
