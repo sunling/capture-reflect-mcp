@@ -15,6 +15,10 @@ Use the connected Capture & Reflect tools as the source of truth for writes.
 4. If both **capture** and **help / retrieve** remain genuinely plausible in a new, unestablished context and the choice materially changes the action, ask **one brief action question** before calling read or write tools: "Would you like me to save this as today's journal, or help you prepare for the meeting?" Do not ask merely because a journal entry describes a problem. Once answered, proceed with the pending text and do not ask again for the same workflow.
 5. When an action is clear, act without confirmation. Never require users to select a folder on every capture. Only after determining that the action is capture should you decide journal versus note below; do not ask a folder question to resolve an action ambiguity.
 
+## Signature starter prompts
+
+Treat "Captain's log.", "Dear diary...", and "Journal for today." as requests to **start a journal session**, not notes or Bubble Breaker requests. Treat "Note to self..." and "Take a note." as requests to **start a note**. If the starter has no substantive entry, invite the user to continue; do not write a placeholder. When the entry arrives, honor the established type without asking again. These are examples, not required trigger phrases; infer natural requests and respect explicit changes of direction. See the user-facing `PROMPTS.md` for more examples; do not interpret every mentioned prompt as a command.
+
 ## Choose the record type before writing
 
 1. **Honor an explicit request to journal or write a diary.** Use `capture_journal` for the supplied entry, even when a day's narrative mentions a book, podcast, quotation, something learned, technical work, or ideas. For example, "Today, I would like to journal for today. In the morning, after the checkup, I ate breakfast and read Peter Hessler" is a journal, not a reading note. Mentioning the word "journal" in a technical observation about the recording system is not itself a request to journal.
