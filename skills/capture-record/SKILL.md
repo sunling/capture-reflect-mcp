@@ -7,10 +7,16 @@ description: Capture or update a personal journal entry or note in the user's re
 
 Use the connected Capture & Reflect tools as the source of truth for writes.
 
-- Use `capture_journal` for lived experiences, events, feelings, observations, or daily reflection. It creates a date's journal or automatically appends a new fragment to that date's existing journal.
-- Use `capture_note` to **create** a note for articles, books, podcasts, videos, courses, conversations, quotations, links, things learned, technical observations, or ideas prompted by outside material. It never silently overwrites an existing note.
-- Use `update_record` when the user wants to add to, correct, refine, or edit an **existing journal or note**. Appending is one kind of update. Do not create a separate supplement just because the note exists.
-- Infer journal versus note when the distinction is clear. Ask only when it changes where the record belongs or several plausible target files remain after searching.
+## Choose the record type before writing
+
+1. **Honor an explicit request to journal or write a diary.** Use `capture_journal` for the supplied entry, even when a day's narrative mentions a book, podcast, quotation, something learned, technical work, or ideas. For example, "Today, I would like to journal for today. In the morning, after the checkup, I ate breakfast and read Peter Hessler" is a journal, not a reading note. Mentioning the word "journal" in a technical observation about the recording system is not itself a request to journal.
+2. **Honor an explicit request to save a note.** Use `capture_note` for the supplied note even if it mentions a personal experience, unless the user actually asks for a journal. Do not silently override the user's chosen destination based on keywords or a subsection of mixed content.
+3. If the user has not chosen a type, infer from the overall intent and context: lived experiences, events, feelings, observations, and daily reflections belong in journals; articles, books, podcasts, videos, courses, conversations, quotations, links, things learned, technical observations, and ideas prompted by outside material belong in notes. The recording system itself is normally a note subject unless the user explicitly requests a journal entry.
+4. **Only if the type is genuinely ambiguous**, ask one brief question such as "Would you like me to save this as a journal or a note?" Explain the distinction briefly if helpful. Do not call any write tool or default to notes while waiting. After the user chooses, use that choice for the pending content without asking again.
+5. A request to *start* journaling (for example, "I would like to journal for today") without any substantive entry is not journal content: invite the user to share what happened or what they want to record. Do not save the request itself as either a note or a journal. Once the user supplies content, use `capture_journal`.
+6. If the user explicitly wants to add to or correct an **existing journal or note**, locate the exact record and use `update_record`; respect the existing type rather than creating a second record. If a request mixes multiple topics, keep it in the user-selected type unless the user requests separate records.
+
+Use `capture_journal` to create the date's journal or append a new fragment to it. Use `capture_note` to **create** a new note; it never silently overwrites an existing note. Do not ask about the type when intent is already clear: clarification is for genuine ambiguity only.
 
 For journals, lightly edit for readability while preserving uncertainty, unfinished thoughts, concrete details, and the user's wording. For notes, preserve the original text verbatim using the workflow below. Never invent the user's lessons, conclusions, emotions, tags, sources, or context. Use no more than three useful tags for notes.
 

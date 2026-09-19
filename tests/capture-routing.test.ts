@@ -44,6 +44,14 @@ describe("capture routing metadata", () => {
       expect(update.description).toContain("journal or note");
       expect(update.inputSchema.properties.mode.enum).toEqual(["append", "replace"]);
       expect(listing.tools.some((tool: any) => tool.name === "update_note")).toBe(false);
+
+      // The model sees these descriptions even when it does not fetch the bundled Skill.
+      expect(journal.description).toContain("explicitly asks to journal");
+      expect(journal.description).toContain("entry mentions books");
+      expect(journal.description).toContain("ask them to share it before calling this tool");
+      expect(note.description).toContain("Explicit journal or diary requests ALWAYS go to capture_journal");
+      expect(note.description).toContain("ask whether to save as journal or note and wait before writing");
+      expect(note.description).toContain("Do not save a request to start journaling");
     } finally {
       await server.close();
       await client.close();
