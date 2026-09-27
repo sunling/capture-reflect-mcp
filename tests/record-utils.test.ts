@@ -15,18 +15,18 @@ describe("review save dates", () => {
   );
 });
 
-describe("multilingual filenames", () => {
-  it.each(["हिन्दी", "บันทึก", "cafe\u0301", "تَأَمُّل", "散步", "reflection"])(
-    "accepts keyword %s but never uses it in the daily journal filename",
+describe("ASCII filename slugs", () => {
+  it.each(["walk", "effort-and-choice", "a1", "a".repeat(40)])(
+    "accepts slug %s without using it in the daily journal filename",
     (keyword) => {
       expect(() => assertKeyword(keyword)).not.toThrow();
-      expect(journalFileName({ date: "2026-08-31", title: keyword, keyword, content: keyword }))
+      expect(journalFileName({ date: "2026-08-31", title: "中文标题", keyword, content: "中文正文" }))
         .toBe("20260831.md");
     },
   );
 
-  it.each(["../escape", "a/b", "a\\b", "two words", "", "a".repeat(41)])(
-    "rejects invalid keyword %s",
+  it.each(["散步", "हिन्दी", "cafe\u0301", "../escape", "a/b", "a\\b", "two words", "Two-words", "a_b", "a--b", "-a", "a-", "", "a".repeat(41)])(
+    "rejects invalid slug %s for new files",
     (keyword) => expect(() => assertKeyword(keyword)).toThrow(),
   );
 });

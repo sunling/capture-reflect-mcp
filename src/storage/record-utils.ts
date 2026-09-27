@@ -8,7 +8,7 @@ import type {
 } from "./records-store.js";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const SAFE_KEYWORD_PATTERN = /^[\p{L}\p{M}\p{N}_-]{1,40}$/u;
+const SAFE_KEYWORD_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 /** A new identity is stored in Markdown, never inferred from a mutable path or Git SHA. */
 export function createRecordId(): string {
@@ -26,9 +26,9 @@ export function assertDate(date: string): void {
 }
 
 export function assertKeyword(keyword: string): void {
-  if (!SAFE_KEYWORD_PATTERN.test(keyword)) {
+  if (keyword.length > 40 || !SAFE_KEYWORD_PATTERN.test(keyword)) {
     throw new Error(
-      "keyword must be 1-40 letters, combining marks, numbers, underscores, or hyphens, with no spaces or slashes.",
+      "keyword must be 1-40 lowercase ASCII letters or digits, separated by single hyphens (for example, morning-walk).",
     );
   }
 }
@@ -38,7 +38,7 @@ export function compactDate(date: string): string {
 }
 
 export function isRangeReviewPath(filePath: string): boolean {
-  return filePath.startsWith("reviews/") && /^\d{8}-\d{8}-.+\.md$/.test(path.basename(filePath));
+  return filePath.startsWith("reviews/") && /^\d{8}-\d{8}(?:-.+)?\.md$/.test(path.basename(filePath));
 }
 
 export function recordDateFromPath(filePath: string, content?: string): string | undefined {

@@ -25,7 +25,7 @@ describe("journal headings", () => {
     const input = {
       date: "2026-09-15",
       title: "记录系统优化",
-      keyword: "记录系统优化",
+      keyword: "record-system",
       content: "今天进行了调整。",
     };
     expect(journalFileName(input)).toBe("20260915.md");
@@ -44,19 +44,19 @@ describe("journal headings", () => {
 
   it("keeps the weekday aligned to the journal date, including a Sunday", () => {
     expect(journalHeading({
-      date: "2026-09-13", title: "回家", keyword: "回家", content: "旅行结束。",
+      date: "2026-09-13", title: "回家", keyword: "home", content: "旅行结束。",
     })).toContain("# 2026年9月13日 · 周日\n\n");
   });
 
   it("creates one stable ID and one day-level heading without repeating them when appending", async () => {
     const { root, store } = await localStore();
     const first = await store.captureJournal({
-      date: "2026-09-15", title: "早餐", keyword: "早晨", content: "吃了早饭。",
+      date: "2026-09-15", title: "早餐", keyword: "morning", content: "吃了早饭。",
     });
     const initial = await fs.readFile(path.join(root, first.path), "utf8");
     const initialId = recordId(initial);
     const second = await store.captureJournal({
-      date: "2026-09-15", title: "晚间", keyword: "晚上", content: "补充今天的记录。",
+      date: "2026-09-15", title: "晚间", keyword: "evening", content: "补充今天的记录。",
     });
     const body = await fs.readFile(path.join(root, first.path), "utf8");
     expect(first.path).toBe("journals/2026/202609/20260915.md");
@@ -77,7 +77,7 @@ describe("journal headings", () => {
     const legacy = "journals/2026/202609/20260915-周二-旧文件名.md";
     await fs.writeFile(path.join(root, legacy), "### 旧记录\n\n保留原文。\n");
     const result = await store.captureJournal({
-      date: "2026-09-15", title: "追加", keyword: "新词", content: "新内容。",
+      date: "2026-09-15", title: "追加", keyword: "new-thought", content: "新内容。",
     });
     expect(result).toMatchObject({ path: legacy, action: "appended" });
     const body = await fs.readFile(path.join(root, legacy), "utf8");

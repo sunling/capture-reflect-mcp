@@ -148,7 +148,7 @@ export function createServer(
       inputSchema: z.object({
         date: z.string().optional().describe("YYYY-MM-DD. Omit for today or unspecified date; the server uses its configured time zone. Supply only for an explicitly specified calendar date."),
         title: z.string().min(1).describe("Short factual fragment heading in the user's original language"),
-        keyword: z.string().min(1).max(40).describe("Short filename keyword in the user's language; Unicode letters, combining marks, numbers, underscores and hyphens are supported"),
+        keyword: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(40).optional().describe("Optional lowercase ASCII keyword for image filenames, e.g. morning-walk; journal Markdown filenames use only the date. Omit when there are no images."),
         content: z.string().min(1).describe("Markdown journal entry in the user's original language, without translation, invented summaries, or tags"),
         attachments: z.array(fileParamSchema).max(5).optional().describe("Optional image files supplied by the AI client"),
       }),
@@ -164,7 +164,7 @@ export function createServer(
         ...(await store.captureJournal({
           date: date ?? currentDate(timeZone),
           title,
-          keyword,
+          keyword: keyword ?? "journal",
           content,
           ...(images.length > 0 ? { attachments: images } : {}),
         })),
@@ -181,7 +181,7 @@ export function createServer(
       inputSchema: z.object({
         date: z.string().optional().describe("YYYY-MM-DD. Omit for today or unspecified date; the server uses its configured time zone. Supply only for an explicitly specified calendar date."),
         title: z.string().min(1).describe("Title in the user's original language"),
-        keyword: z.string().min(1).max(40).describe("Short filename keyword in the user's language; Unicode letters, combining marks, numbers, underscores and hyphens are supported"),
+        keyword: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).max(40).describe("Short descriptive English slug for the filename, lowercase ASCII words separated by hyphens, e.g. effort-and-choice. Keep the title and note in the user's original language."),
         originalNote: z.string().min(1).refine((value) => value.trim().length > 0, "originalNote must not be blank").describe("The user's original note text verbatim, without a heading, reorganization, translation, or AI additions"),
         source: z.object({
           title: z.string().min(1).optional(),
@@ -266,7 +266,6 @@ export function createServer(
         from: z.string().describe("Inclusive start of the reviewed period, YYYY-MM-DD"),
         to: z.string().describe("Inclusive end of the reviewed period, YYYY-MM-DD"),
         title: z.string().trim().min(1),
-        keyword: z.string().min(1).max(40).describe("Topic keyword in the user's language; omit dates because the server prefixes FROMYYYYMMDD-TOYYYYMMDD. Use Unicode letters, numbers, underscores or hyphens"),
         content: z.string().trim().min(1).describe("Markdown review in the user's language. Label AI interpretations and keep actual user thoughts distinct. Cite source entries for observations. Do not fabricate patterns or thoughts."),
         sourcePaths: z.array(z.string().min(1)).min(1).describe("Copy exact path values from journal/note records read within from/to. Do not reconstruct filenames or use Markdown-relative links. Keep out-of-range historical comparisons and earlier reviews as citations in content, not in sourcePaths. Stored as metadata and relative Markdown links."),
       }),

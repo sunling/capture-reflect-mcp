@@ -18,10 +18,10 @@ describe("LocalRecordsStore", () => {
   });
 
   it("saves reviews with one metadata inventory and no duplicated source footer", async () => {
-    const note = await store.captureNote({ date: "2026-09-01", title: "散步", keyword: "散步", originalNote: "A walk helped me focus." });
+    const note = await store.captureNote({ date: "2026-09-01", title: "散步", keyword: "walk", originalNote: "A walk helped me focus." });
     const input = { date: "2026-09-14", from: "2026-09-01", to: "2026-09-07", title: "Weekly review", keyword: "weekly", content: "## Interpretation (AI)\nWalking may help focus.\n\n## Questions\nDoes this recur?", sourcePaths: [note.path] };
     const result = await store.saveReview(input);
-    expect(result).toEqual({ path: "reviews/2026/202609/20260901-20260907-weekly.md", action: "created" });
+    expect(result).toEqual({ path: "reviews/2026/202609/20260901-20260907.md", action: "created" });
     const reviews = await store.getRecords({ from: "2026-09-14", to: "2026-09-14", types: ["review"] });
     expect(reviews).toHaveLength(1);
     expect(reviews[0]?.content).toContain("from: 2026-09-01");
@@ -34,7 +34,7 @@ describe("LocalRecordsStore", () => {
     expect(await store.getRecords({ from: input.from, to: input.to, types: ["review"] })).toHaveLength(0);
     await expect(store.saveReview({ ...input, content: "replacement" })).rejects.toThrow();
     expect((await store.getRecords({ from: "2026-09-14", to: "2026-09-14", types: ["review"] }))[0]?.content).toBe(reviews[0]?.content);
-    for (const sourcePaths of [[], ["../secret.md"], ["reviews/2026/202609/20260901-20260907-weekly.md"], ["notes/missing.md"]]) {
+    for (const sourcePaths of [[], ["../secret.md"], ["reviews/2026/202609/20260901-20260907.md"], ["notes/missing.md"]]) {
       await expect(store.saveReview({ ...input, keyword: "invalid", sourcePaths })).rejects.toThrow();
     }
     await expect(store.saveReview({ ...input, keyword: "outside", from: "2026-09-02" })).rejects.toThrow();
@@ -45,13 +45,13 @@ describe("LocalRecordsStore", () => {
     const created = await store.captureJournal({
       date: "2026-08-24",
       title: "第一次记录",
-      keyword: "咖啡店",
+      keyword: "coffee-shop",
       content: "今天在咖啡店想到了一件事。",
     });
     const appended = await store.captureJournal({
       date: "2026-08-24",
       title: "后来想到",
-      keyword: "不会改文件名",
+      keyword: "same-file",
       content: "晚上又补充了一点。",
     });
 
@@ -67,10 +67,12 @@ describe("LocalRecordsStore", () => {
     expect(content).toContain("### 后来想到");
   });
 
-  it("names reviews by range and topic while reading new and legacy reviews by save date", async () => {
-    const note = await store.captureNote({ date: "2026-09-05", title: "计划", keyword: "计划", originalNote: "Original evidence" });
-    const saved = await store.saveReview({ date: "2026-10-02", from: "2026-09-05", to: "2026-09-11", title: "计划被打乱之后", keyword: "计划被打乱之后", content: "review-marker", sourcePaths: [note.path] });
-    expect(saved.path).toBe("reviews/2026/202610/20260905-20260911-计划被打乱之后.md");
+  it("names reviews by range and rejects the same range on another save date", async () => {
+    const note = await store.captureNote({ date: "2026-09-05", title: "计划", keyword: "plans", originalNote: "Original evidence" });
+    const saved = await store.saveReview({ date: "2026-10-02", from: "2026-09-05", to: "2026-09-11", title: "计划被打乱之后", keyword: "after-plans-changed", content: "review-marker", sourcePaths: [note.path] });
+    expect(saved.path).toBe("reviews/2026/202610/20260905-20260911.md");
+    await expect(store.saveReview({ date: "2026-10-03", from: "2026-09-05", to: "2026-09-11", title: "再次回看", content: "Another review", sourcePaths: [note.path] }))
+      .rejects.toThrow("A review already exists for 2026-09-05 to 2026-09-11");
     const legacy = "reviews/2026/202610/20261002-legacy.md";
     await fs.writeFile(path.join(root, legacy), "review-marker");
     const records = await store.getRecords({ from: "2026-10-02", to: "2026-10-02", types: ["review"] });
@@ -85,11 +87,23 @@ describe("LocalRecordsStore", () => {
     await fs.mkdir(directory, { recursive: true });
     const legacyPath = "journals/2026/202608/20260831-周一-walk.md";
     await fs.writeFile(path.join(root, legacyPath), "### Walk\n\nOriginal entry.\n");
-    const result = await store.captureJournal({ date: "2026-08-31", title: "Later", keyword: "हिन्दी", content: "Another thought." });
+    const result = await store.captureJournal({ date: "2026-08-31", title: "Later", keyword: "hindi", content: "Another thought." });
     expect(result.path).toBe(legacyPath);
     expect(result.action).toBe("appended");
     expect(await fs.readdir(directory)).toEqual(["20260831-周一-walk.md"]);
     expect(await fs.readFile(path.join(root, legacyPath), "utf8")).toContain("Another thought.");
+  });
+
+  it("creates multiple Chinese-language notes on one day with distinct ASCII filenames", async () => {
+    const first = await store.captureNote({ date: "2026-09-27", title: "努力与选择", keyword: "effort-and-choice", originalNote: "努力是可控的。" });
+    const second = await store.captureNote({ date: "2026-09-27", title: "散步时想到的事", keyword: "thoughts-on-walk", originalNote: "今天散步时有个想法。" });
+    expect([first.path, second.path]).toEqual([
+      "notes/2026/202609/20260927-effort-and-choice.md",
+      "notes/2026/202609/20260927-thoughts-on-walk.md",
+    ]);
+    expect((await store.getRecords({ from: "2026-09-27", to: "2026-09-27" })).map((record) => record.path)).toHaveLength(2);
+    await expect(store.captureNote({ date: "2026-09-27", title: "中文", keyword: "中文", originalNote: "内容" }))
+      .rejects.toThrow("lowercase ASCII");
   });
 
   it("stores an image beside a journal and inserts a relative Markdown link", async () => {
@@ -97,7 +111,7 @@ describe("LocalRecordsStore", () => {
     const created = await store.captureJournal({
       date: "2026-08-31",
       title: "散步",
-      keyword: "散步",
+      keyword: "walk",
       content: "今天带猫出门。",
       attachments: [
         {
@@ -110,13 +124,13 @@ describe("LocalRecordsStore", () => {
     });
 
     expect(created.attachmentPaths).toEqual([
-      "journals/2026/202608/images/20260831-散步-1.jpg",
+      "journals/2026/202608/images/20260831-walk-1.jpg",
     ]);
     await expect(
       fs.readFile(path.join(root, created.attachmentPaths[0]!)),
     ).resolves.toEqual(image);
     await expect(fs.readFile(path.join(root, created.path), "utf8")).resolves.toContain(
-      "![遛猫](images/20260831-散步-1.jpg)",
+      "![遛猫](images/20260831-walk-1.jpg)",
     );
   });
 
@@ -124,14 +138,14 @@ describe("LocalRecordsStore", () => {
     const created = await store.captureNote({
       date: "2026-08-23",
       title: "Energetic charge",
-      keyword: "生命力",
+      keyword: "vitality",
       source: { title: "The Creative Act" },
       tags: ["阅读", "创作"],
       originalNote: "我在想作品是否能代表我正在经历的。",
     });
     const records = await store.getRecords({ from: "2026-08-23", to: "2026-08-23" });
 
-    expect(created.path).toBe("notes/2026/202608/20260823-生命力.md");
+    expect(created.path).toBe("notes/2026/202608/20260823-vitality.md");
     expect(records).toHaveLength(1);
     expect(records[0]?.content).not.toContain('source: "The Creative Act"');
     expect(records[0]?.content).toContain("## 来源");
@@ -142,7 +156,7 @@ describe("LocalRecordsStore", () => {
     const created = await store.captureNote({
       date: "2026-09-18",
       title: "记录系统的结构",
-      keyword: "笔记结构",
+      keyword: "note-structure",
       originalNote: "我想让笔记既保留原话，也能连接以前的记录。",
       source: {
         title: "Capture & Reflect",
@@ -192,7 +206,7 @@ describe("LocalRecordsStore", () => {
     const created = await newStore.captureNote({
       date: "2026-08-27",
       title: "零配置记录",
-      keyword: "开始",
+      keyword: "beginning",
       originalNote: "第一次写入时创建本地目录。",
     });
 
@@ -205,7 +219,7 @@ describe("LocalRecordsStore", () => {
     await store.captureJournal({
       date: "2026-08-24",
       title: "关于效率",
-      keyword: "效率",
+      keyword: "efficiency",
       content: "这些不高效的活一定要被摒弃吗？",
     });
     await fs.writeFile(path.join(root, "PROFILE.md"), "效率", "utf8");

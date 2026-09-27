@@ -78,7 +78,8 @@ export interface SaveReviewInput {
   from: string;
   to: string;
   title: string;
-  keyword: string;
+  /** Deprecated input, ignored. Review filenames use only the reviewed date range. */
+  keyword?: string;
   content: string;
   sourcePaths: string[];
 }

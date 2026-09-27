@@ -1,4 +1,4 @@
-import { assertDate, assertKeyword, compactDate, createRecordId } from "./record-utils.js";
+import { assertDate, compactDate, createRecordId } from "./record-utils.js";
 import type { RecordsStore, SaveReviewInput } from "./records-store.js";
 
 export class ReviewSourceValidationError extends Error {
@@ -25,7 +25,6 @@ export async function prepareReview(store: RecordsStore, input: SaveReviewInput)
   assertDate(input.date);
   assertDate(input.from);
   assertDate(input.to);
-  assertKeyword(input.keyword);
   if (input.from > input.to) throw new Error("from must be on or before to.");
   if (!input.title.trim() || !input.content.trim()) throw new Error("Review title and content must not be empty.");
   if (input.sourcePaths.length === 0) throw new Error("A review must reference at least one reviewed entry.");
@@ -45,7 +44,15 @@ export async function prepareReview(store: RecordsStore, input: SaveReviewInput)
     throw new ReviewSourceValidationError("REVIEW_SOURCES_NOT_IN_RANGE", input.from, input.to, sources.length, unavailablePaths);
   }
   const date = compactDate(input.date);
-  const reviewPath = `reviews/${date.slice(0, 4)}/${date.slice(0, 6)}/${compactDate(input.from)}-${compactDate(input.to)}-${input.keyword}.md`;
+  const reviewPath = `reviews/${date.slice(0, 4)}/${date.slice(0, 6)}/${compactDate(input.from)}-${compactDate(input.to)}.md`;
+  const existingReviews = await store.getRecords({ from: "0001-01-01", to: "9999-12-31", types: ["review"] });
+  if (existingReviews.some((record) =>
+    record.path === reviewPath ||
+    new RegExp(`^from: ${input.from}$`, "m").test(record.content) &&
+      new RegExp(`^to: ${input.to}$`, "m").test(record.content)
+  )) {
+    throw new Error(`A review already exists for ${input.from} to ${input.to}; find the existing review before saving again.`);
+  }
   const metadata = [
     "---", `id: ${createRecordId()}`, `title: ${JSON.stringify(input.title.trim())}`, `date: ${input.date}`,
     `from: ${input.from}`, `to: ${input.to}`, "type: review", "source_paths:",
