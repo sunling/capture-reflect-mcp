@@ -20,7 +20,7 @@ describe("Review failure diagnostics through MCP", () => {
   beforeEach(async () => {
     root = await fs.mkdtemp(path.join(os.tmpdir(), "review-diagnostics-"));
     store = new LocalRecordsStore(root);
-    currentPath = (await store.captureNote({ date: "2026-09-10", title: "本周", keyword: "本周", originalNote: "Private current evidence." })).path;
+    currentPath = (await store.captureNote({ date: "2026-09-10", title: "本周", keyword: "this-week", originalNote: "Private current evidence." })).path;
     historicalPath = (await store.captureNote({ date: "2026-09-07", title: "Earlier", keyword: "earlier", originalNote: "Private earlier evidence." })).path;
   });
 
@@ -32,7 +32,7 @@ describe("Review failure diagnostics through MCP", () => {
   it.each(["mixed_ranges", "wrong_filename", "markdown_link", "changed_range", "renamed_record"])(
     "returns an actionable tool error and safe log for %s, then permits a corrected save",
     async (scenario) => {
-      // Use paths actually returned by reads, including Unicode filenames.
+      // Use paths actually returned by reads; never guess note filenames from titles.
       const current = await store.getRecords({ from: review.from, to: review.to });
       const previous = await store.getRecords({ from: "2026-09-01", to: "2026-09-07" });
       expect(current.map((record) => record.path)).toEqual([currentPath]);
@@ -51,7 +51,7 @@ describe("Review failure diagnostics through MCP", () => {
         invalidPaths = [currentPath];
       } else if (scenario === "renamed_record") {
         input.sourcePaths = invalidPaths = [currentPath];
-        const newPath = currentPath.replace("本周.md", "renamed.md");
+        const newPath = currentPath.replace("this-week.md", "renamed.md");
         await fs.rename(path.join(root, currentPath), path.join(root, newPath));
         currentPath = newPath;
       }

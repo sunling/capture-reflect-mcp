@@ -95,7 +95,7 @@ describe("Bubble Breaker MCP integration", () => {
       try {
         const saved = await request("tools/call", { name: "save_review", arguments: review });
         expect(saved.isError).not.toBe(true);
-        expect(store.saveReview).toHaveBeenCalledWith({ ...review, date: "2026-09-14" });
+        expect(store.saveReview).toHaveBeenCalledWith({ ...review, keyword: undefined, date: "2026-09-14" });
       } finally {
         vi.useRealTimers();
       }
