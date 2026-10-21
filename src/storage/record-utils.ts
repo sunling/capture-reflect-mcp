@@ -245,6 +245,7 @@ export function buildNoteDocument(note: CaptureNoteInput): string {
     `id: ${createRecordId()}`,
     `title: ${JSON.stringify(note.title.trim())}`,
     `date: ${note.date}`,
+    ...(note.relatedLookup ? [`related_lookup: ${JSON.stringify({ ...note.relatedLookup, reportedBy: "client" })}`] : []),
     ...(tags.length > 0 ? ["tags:", ...tags.map((tag) => `  - ${JSON.stringify(tag)}`)] : []),
     "---",
   ].join("\n");

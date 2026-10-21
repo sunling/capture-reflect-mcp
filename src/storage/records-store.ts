@@ -44,6 +44,12 @@ export interface RelatedRecordEntry {
   possibleConnection: string;
 }
 
+/** Client-reported workflow evidence, not a server-verified request audit. */
+export type RelatedLookup =
+  | { status: "linked"; queries: string[] }
+  | { status: "no_meaningful_matches" | "failed"; queries: string[]; reason: string }
+  | { status: "skipped"; reason: "user_requested" | "bubble_breaker_completion" };
+
 export interface CaptureNoteInput {
   date: string;
   title: string;
@@ -51,6 +57,8 @@ export interface CaptureNoteInput {
   originalNote: string;
   source?: NoteSource;
   relatedEntries?: RelatedRecordEntry[];
+  /** Required at the MCP boundary; optional for legacy direct store callers. */
+  relatedLookup?: RelatedLookup;
   furtherReflection?: string;
   possibleActions?: string[];
   tags?: string[];

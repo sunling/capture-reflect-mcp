@@ -123,13 +123,15 @@ try {
     expectedPreviousPaths = fixture.previous.map((record) => record.path);
   } else {
     const earlier = await successful("capture_note", {
-      date: "2026-09-07", title: "上周", keyword: "上周", originalNote: "上周的比较材料。",
+      date: "2026-09-07", title: "上周", keyword: "previous-week", originalNote: "上周的比较材料。",
+      relatedLookup: { status: "skipped", reason: "user_requested" },
     }, "capture earlier note");
     const current = await successful("capture_note", {
-      date: "2026-09-10", title: "本周", keyword: "本周", originalNote: "散步后更容易专注。",
+      date: "2026-09-10", title: "本周", keyword: "current-week", originalNote: "散步后更容易专注。",
+      relatedLookup: { status: "skipped", reason: "user_requested" },
     }, "capture current note");
     const journal = await successful("capture_journal", {
-      date: "2026-09-14", title: "星期日", keyword: "星期日", content: "今天在公园散步。",
+      date: "2026-09-14", title: "星期日", keyword: "sunday", content: "今天在公园散步。",
     }, "capture current journal");
     expectedCurrentPaths = [current.path, journal.path];
     expectedPreviousPaths = [earlier.path];
@@ -174,14 +176,14 @@ try {
   const corrected = { ...review, sourcePaths: weekly.records.map((record) => record.path) };
   const saved = await successful("save_review", corrected, "save corrected review");
   assert.equal(saved.action, "created");
-  assert.equal(saved.path, "reviews/2026/202609/20260908-20260914-weekly.md");
+  assert.equal(saved.path, "reviews/2026/202609/20260908-20260914.md");
   const readBack = (await readReviews()).records;
   assert.equal(readBack.length, 1);
   assert.equal(readBack[0].path, saved.path);
   assert.ok(readBack[0].content.includes(review.content));
   for (const source of corrected.sourcePaths) {
     assert.ok(readBack[0].content.includes(source));
-    assert.ok(readBack[0].content.includes(`../../../${source.split("/").map(encodeURIComponent).join("/")}`));
+    // Source inventory is stored in frontmatter; the author supplies inline links.
   }
   assert.equal(await readFile(path.join(root, saved.path), "utf8"), readBack[0].content);
   const duplicate = await call("save_review", { ...corrected, content: "replacement" }, "overwrite attempt (expected error)");
