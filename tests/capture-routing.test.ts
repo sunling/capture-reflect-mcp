@@ -41,6 +41,9 @@ describe("capture routing metadata", () => {
       expect(journal.description).toContain("Automatically");
       expect(note.description).toContain("recording system");
       expect(note.inputSchema.required).toContain("originalNote");
+      expect(note.inputSchema.required).toContain("relatedLookup");
+      expect(note.description).toContain("Before saving a new note, MUST call search_records");
+      expect(search.description).toContain("even without a separate user request to retrieve");
       expect(note.inputSchema.properties).not.toHaveProperty("content");
       expect(note.inputSchema.properties.source.properties).toHaveProperty("url");
       expect(note.inputSchema.properties.relatedEntries.maxItems).toBe(3);
